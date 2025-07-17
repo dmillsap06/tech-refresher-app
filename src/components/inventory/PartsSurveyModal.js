@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { db } from '../../firebase';
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import logError from '../../utils/logError';
-import Modal from '../common/Modal'; // Import the reusable Modal
+import Modal from '../common/Modal';
 
 const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => {
     const [goodParts, setGoodParts] = useState({});
@@ -17,6 +17,15 @@ const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => 
         const possibleParts = deviceConfig[item.brand]?.devices[item.device]?.parts || [];
         const partsToAdd = possibleParts.filter(part => goodParts[part.name]);
 
+        if (partsToAdd.length === 0) {
+            showNotification("Please select at least one good part to harvest.", "error");
+            setIsSaving(false);
+            return;
+        }
+
+        // Calculate the cost to be assigned to each harvested part.
+        const costPerHarvestedPart = (item.totalCost || 0) / partsToAdd.length;
+
         try {
             await runTransaction(db, async (transaction) => {
                 for (const part of partsToAdd) {
@@ -30,8 +39,13 @@ const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => 
                     const partDoc = await transaction.get(partRef);
 
                     if (partDoc.exists()) {
-                        const newQuantity = (partDoc.data().quantity || 0) + 1;
-                        transaction.update(partRef, { quantity: newQuantity });
+                        const existingData = partDoc.data();
+                        const newQuantity = (existingData.quantity || 0) + 1;
+                        const newTotalValue = (existingData.totalValue || 0) + costPerHarvestedPart;
+                        transaction.update(partRef, { 
+                            quantity: newQuantity,
+                            totalValue: newTotalValue 
+                        });
                     } else {
                         transaction.set(partRef, {
                             brand: item.brand,
@@ -39,6 +53,7 @@ const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => 
                             partName: part.name,
                             color: colorIdentifier,
                             quantity: 1,
+                            totalValue: costPerHarvestedPart,
                             createdAt: serverTimestamp()
                         });
                     }
