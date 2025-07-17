@@ -47,8 +47,8 @@ const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => 
                 const partDocs = {};
                 const partIds = partsToAdd.map(part => {
                     const colorIdentifier = part.hasColor ? item.color : 'N/A';
-                    const deviceSlug = `${item.brand}-${item.device}`.toLowerCase().replace(/\s+/g, '-');
-                    const partNameSlug = part.name.toLowerCase().replace(/\s+/g, '-');
+                    const deviceSlug = `${item.brand}-${item.device}`.toLowerCase().replace(/\s+/g, '-').replace(/\//g, '');
+                    const partNameSlug = part.name.toLowerCase().replace(/\s+/g, '-').replace(/\//g, '');
                     const colorSlug = colorIdentifier.toLowerCase().replace(/\s+/g, '-').replace(/\//g,'');
                     const partId = `${deviceSlug}-${partNameSlug}-${colorSlug}`;
                     const partRef = doc(db, "parts", partId);
