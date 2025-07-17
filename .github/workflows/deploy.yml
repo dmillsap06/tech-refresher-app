@@ -1,0 +1,38 @@
+# .github/workflows/deploy.yml
+
+name: Deploy to Firebase Hosting
+
+# This action triggers on every push to the 'main' branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checks out your repository's code so the job can access it
+      - uses: actions/checkout@v3
+
+      # Step 2: Sets up Node.js, which is needed to build your project
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Use a version compatible with your project
+
+      # Step 3: Installs your project's dependencies
+      - name: Install Dependencies
+        run: npm ci
+
+      # Step 4: Builds your React app for production
+      - name: Build Project
+        run: npm run build
+
+      # Step 5: Deploys the built project to Firebase Hosting
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}'
+          channelId: live
+          projectId: tech-refresher-tracker
