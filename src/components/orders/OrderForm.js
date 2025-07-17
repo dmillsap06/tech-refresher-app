@@ -6,7 +6,7 @@ import Modal from '../common/Modal'; // Import the reusable Modal
 
 const TrashIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 hover:text-red-500" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1[...]
+        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 10-2 0v6a1 1 0 102 0V7z" clipRule="evenodd" />
     </svg>
 );
 
@@ -129,7 +129,14 @@ const OrderForm = ({ showNotification, onClose, userProfile }) => {
     const renderInputField = (label, id, type = 'text', value) => (
         <div>
             <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
-            <input type={type} id={id} value={value} onChange={(e) => setFormData({...formData, [id]: e.target.value})} {...(type === 'number' && { step: '0.01' })} className="mt-1 block w-full px-3 p[...]
+            <input
+                type={type}
+                id={id}
+                value={value}
+                onChange={(e) => setFormData({...formData, [id]: e.target.value})}
+                {...(type === 'number' && { step: '0.01' })}
+                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none"
+            />
         </div>
     );
     
@@ -141,7 +148,12 @@ const OrderForm = ({ showNotification, onClose, userProfile }) => {
                     <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="platform" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Platform</label>
-                            <select id="platform" value={formData.platform} onChange={(e) => setFormData({...formData, platform: e.target.value})} className="mt-1 block w-full pl-3 pr-10 py-2 text-bas[...]
+                            <select
+                                id="platform"
+                                value={formData.platform}
+                                onChange={(e) => setFormData({...formData, platform: e.target.value})}
+                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:bg-gray-700 dark:border-gray-600 rounded-md focus:outline-none"
+                            >
                                 <option>eBay</option>
                                 <option>Facebook Marketplace</option>
                                 <option>Local Sale</option>
@@ -162,7 +174,12 @@ const OrderForm = ({ showNotification, onClose, userProfile }) => {
                     <h4 className="text-md font-semibold text-gray-800 dark:text-gray-200">Items Sold</h4>
                     <div className="mt-4">
                         <label htmlFor="inventoryItemId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Main Inventory Item</label>
-                        <select id="inventoryItemId" value={formData.inventoryItemId} onChange={(e) => setFormData({...formData, inventoryItemId: e.target.value})} className="mt-1 block w-full pl-3 pr[...]
+                        <select
+                            id="inventoryItemId"
+                            value={formData.inventoryItemId}
+                            onChange={(e) => setFormData({...formData, inventoryItemId: e.target.value})}
+                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:bg-gray-700 dark:border-gray-600 rounded-md focus:outline-none"
+                        >
                             <option value="">Select an item...</option>
                             {inventory.map(item => (
                                 <option key={item.id} value={item.id}>
@@ -174,7 +191,11 @@ const OrderForm = ({ showNotification, onClose, userProfile }) => {
                     <div className="mt-4">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">(Optional) Add Additional Parts</label>
                         <div className="mt-1 flex gap-2">
-                            <select value={selectedPart} onChange={(e) => setSelectedPart(e.target.value)} className="flex-grow pl-3 pr-10 py-2 text-base border-gray-300 dark:bg-gray-700 dark:border-g[...]
+                            <select
+                                value={selectedPart}
+                                onChange={(e) => setSelectedPart(e.target.value)}
+                                className="flex-grow pl-3 pr-10 py-2 text-base border-gray-300 dark:bg-gray-700 dark:border-gray-600 rounded-md focus:outline-none"
+                            >
                                 <option value="">Select a part to add...</option>
                                 {parts.map(part => (
                                     <option key={part.id} value={part.id}>
@@ -197,8 +218,19 @@ const OrderForm = ({ showNotification, onClose, userProfile }) => {
                     )}
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-900 px-6 py-3 flex justify-end space-x-4">
-                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300" disable[...]
-                    <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700" disabled={isSaving || !formData.inventoryItemId}>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300"
+                        disabled={isSaving}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                        disabled={isSaving || !formData.inventoryItemId}
+                    >
                         {isSaving ? 'Saving...' : 'Save Order'}
                     </button>
                 </div>

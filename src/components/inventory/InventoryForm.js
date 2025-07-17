@@ -100,7 +100,13 @@ const InventoryForm = ({ item, deviceConfig, showNotification, onClose, userProf
     const renderSelectField = (label, id, value, options, onChange, disabled = false) => (
         <div>
             <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
-            <select id={id} value={value} onChange={onChange} disabled={disabled} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:bg-gray-700 dark:border-gray-600 focus:out[...]
+            <select
+                id={id}
+                value={value}
+                onChange={onChange}
+                disabled={disabled}
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:bg-gray-700 dark:border-gray-600 rounded-md focus:outline-none"
+            >
                 <option value="">Select...</option>
                 {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>
@@ -110,7 +116,15 @@ const InventoryForm = ({ item, deviceConfig, showNotification, onClose, userProf
     const renderInputField = (label, id, type = 'text', value, disabled = false) => (
         <div>
             <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
-            <input type={type} id={id} value={value} onChange={(e) => setFormData({...formData, [id]: e.target.value})} {...(type === 'number' && { step: '0.01' })} disabled={disabled} className="mt-1[...]
+            <input
+                type={type}
+                id={id}
+                value={value}
+                onChange={(e) => setFormData({...formData, [id]: e.target.value})}
+                {...(type === 'number' && { step: '0.01' })}
+                disabled={disabled}
+                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none"
+            />
         </div>
     );
     
@@ -135,12 +149,29 @@ const InventoryForm = ({ item, deviceConfig, showNotification, onClose, userProf
                     </div>
                     <div className="mt-4">
                         <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
-                        <textarea id="notes" rows="3" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="mt-1 block w-full px-3 py-2 bg-white dark:bg[...]
+                        <textarea
+                            id="notes"
+                            rows="3"
+                            value={formData.notes}
+                            onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                            className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none"
+                        />
                     </div>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-900 px-6 py-3 flex justify-end space-x-4">
-                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300" disable[...]
-                    <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700" disabled={isSaving}>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300"
+                        disabled={isSaving}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                        disabled={isSaving}
+                    >
                         {isSaving ? 'Saving...' : 'Save'}
                     </button>
                 </div>
