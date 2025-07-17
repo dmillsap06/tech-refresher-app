@@ -12,7 +12,6 @@ const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => 
         setGoodParts(prev => ({ ...prev, [part.name]: !prev[part.name] }));
     };
 
-    //test
     const handleArchive = async () => {
         setIsSaving(true);
         const possibleParts = deviceConfig[item.brand]?.devices[item.device]?.parts || [];
