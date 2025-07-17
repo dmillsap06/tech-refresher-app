@@ -8,6 +8,7 @@ import ArchivedInventory from './components/ArchivedInventory';
 import OrdersPage from './components/orders/OrdersPage';
 import ErrorLog from './components/ErrorLog';
 import Notification from './components/Notification';
+import SplashScreen from './components/SplashScreen'; // Add this file!
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -16,7 +17,7 @@ import logError from './utils/logError';
 
 function App() {
   const [userProfile, setUserProfile] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [notification, setNotification] = useState({ message: '', type: '' });
@@ -24,10 +25,10 @@ function App() {
   // On auth state change, get the user's profile from Firestore if logged in
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setAuthReady(true);
       if (!user) {
         setUserProfile(null);
-        setIsAdmin(false);
+        setIsSuperAdmin(false);
+        setAuthReady(true); // Auth checked
       } else {
         let profile = null;
         let userRef = doc(db, 'users', user.uid);
@@ -39,11 +40,12 @@ function App() {
         }
         if (profile) {
           setUserProfile(profile);
-          setIsAdmin(profile.role === "admin");
+          setIsSuperAdmin(profile.role === "superadmin");
         } else {
           setUserProfile(null);
-          setIsAdmin(false);
+          setIsSuperAdmin(false);
         }
+        setAuthReady(true); // Auth checked
       }
     });
     return () => unsubscribe();
@@ -55,7 +57,7 @@ function App() {
 
   const handleLogin = (profile) => {
     setUserProfile(profile);
-    setIsAdmin(profile.role === "admin");
+    setIsSuperAdmin(profile.role === "superadmin");
     setCurrentPage('dashboard');
   };
 
@@ -67,7 +69,7 @@ function App() {
       showNotification('Could not sign out properly.', 'error');
     }
     setUserProfile(null);
-    setIsAdmin(false);
+    setIsSuperAdmin(false);
   };
 
   const navigate = (page) => {
@@ -75,18 +77,15 @@ function App() {
   };
 
   if (!authReady) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
-        Initializing Secure Session...
-      </div>
-    );
+    // Show splash while loading
+    return <SplashScreen />;
   }
 
   const pageProps = {
     onBack: () => navigate('dashboard'),
     showNotification: showNotification,
     userProfile: userProfile,
-    isAdmin: isAdmin
+    isSuperAdmin: isSuperAdmin
   };
 
   const renderPage = () => {
@@ -102,12 +101,12 @@ function App() {
       case 'orders':
         return <OrdersPage {...pageProps} />;
       case 'errorlog':
-        return isAdmin ? <ErrorLog {...pageProps} /> : <Dashboard userProfile={userProfile} onLogout={handleLogout} onNavigate={navigate} isAdmin={isAdmin} />;
+        return isSuperAdmin ? <ErrorLog {...pageProps} /> : <Dashboard userProfile={userProfile} onLogout={handleLogout} onNavigate={navigate} isSuperAdmin={isSuperAdmin} />;
       case 'dashboard':
       default:
-        return <Dashboard userProfile={userProfile} onLogout={handleLogout} onNavigate={navigate} isAdmin={isAdmin} />;
+        return <Dashboard userProfile={userProfile} onLogout={handleLogout} onNavigate={navigate} isSuperAdmin={isSuperAdmin} />;
     }
-  }
+  };
 
   return (
     <div className="App bg-gray-100 dark:bg-gray-900 min-h-screen">

@@ -17,22 +17,22 @@ const TrendingUpIcon = () => (
 );
 
 const ArchiveIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+  </svg>
 );
 
 const CogIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426[...]
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v2m0 12v2m8-8h2M4 12H2m15.364-6.364l1.414 1.414M6.343 17.657l-1.414 1.414m0-13.071l1.414 1.414M17.657 17.657l1.414-1.414M12 8a4 4 0 100 8 4 4 0 000-8z" />
+  </svg>
 );
 
 const ShieldExclamationIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-[...]
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l8 4v5c0 5-3.8 9.5-8 11-4.2-1.5-8-6-8-11V7l8-4z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01" />
+  </svg>
 );
 
 const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
@@ -47,25 +47,25 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
     const inventoryCollectionRef = collection(db, 'inventory');
     const q = query(inventoryCollectionRef, where('groupId', '==', userProfile.groupId));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        let totalRevenue = 0;
-        let netProfit = 0;
-        let onHandValue = 0;
+      let totalRevenue = 0;
+      let netProfit = 0;
+      let onHandValue = 0;
 
-        snapshot.docs.forEach(doc => {
-            const item = doc.data();
-            if (item.status === 'Sold') {
-                totalRevenue += item.finalSalePrice || 0;
-                netProfit += item.netProfit || 0;
-            } else { 
-                onHandValue += item.totalCost || 0;
-            }
-        });
+      snapshot.docs.forEach(doc => {
+        const item = doc.data();
+        if (item.status === 'Sold') {
+          totalRevenue += item.finalSalePrice || 0;
+          netProfit += item.netProfit || 0;
+        } else { 
+          onHandValue += item.totalCost || 0;
+        }
+      });
 
-        setFinancials({ totalRevenue, netProfit, onHandValue });
-        setIsLoading(false);
+      setFinancials({ totalRevenue, netProfit, onHandValue });
+      setIsLoading(false);
     }, (error) => {
-        logError('Dashboard-FetchFinancials', error);
-        setIsLoading(false);
+      logError('Dashboard-FetchFinancials', error);
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
@@ -77,8 +77,8 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
   };
 
   const formatCurrency = (amount) => {
-      if (isLoading) return "Calculating...";
-      return `$${amount.toFixed(2)}`;
+    if (isLoading) return "Calculating...";
+    return `$${amount.toFixed(2)}`;
   }
 
   return (
@@ -142,7 +142,7 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
           </div>
 
           <div>
-             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Manage</h2>
+            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Manage</h2>
             <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${isSuperAdmin ? '6' : '4'} gap-6`}>
                 <button onClick={() => onNavigate('orders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                     <h3 className="text-xl font-bold text-purple-600 dark:text-purple-400">Orders</h3>
