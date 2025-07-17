@@ -23,7 +23,6 @@ const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => 
             return;
         }
 
-        // Calculate the cost to be assigned to each harvested part.
         const costPerHarvestedPart = (item.totalCost || 0) / partsToAdd.length;
 
         try {
