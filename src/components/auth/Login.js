@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { db, auth } from '../../firebase';
-import { doc, getDoc, setPersistence, browserLocalPersistence, signInWithEmailAndPassword } from "firebase/auth";
+import { setPersistence, browserLocalPersistence, signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
