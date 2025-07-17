@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import logError from '../utils/logError';
 
 // --- Icon Components ---
@@ -24,25 +24,26 @@ const ArchiveIcon = () => (
 
 const CogIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426[...]
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
 );
 
 const ShieldExclamationIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-[...]
     </svg>
 );
-
 
 const Dashboard = ({ userProfile, onLogout, onNavigate, isAdmin }) => {
   const [financials, setFinancials] = useState({ totalRevenue: 0, netProfit: 0, onHandValue: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!userProfile?.groupId) return;
     const inventoryCollectionRef = collection(db, 'inventory');
-    const unsubscribe = onSnapshot(inventoryCollectionRef, (snapshot) => {
+    const q = query(inventoryCollectionRef, where('groupId', '==', userProfile.groupId));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         let totalRevenue = 0;
         let netProfit = 0;
         let onHandValue = 0;
@@ -65,7 +66,7 @@ const Dashboard = ({ userProfile, onLogout, onNavigate, isAdmin }) => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [userProfile?.groupId]);
 
   const capitalize = (s) => {
     if (typeof s !== 'string' || !s) return '';
@@ -140,23 +141,23 @@ const Dashboard = ({ userProfile, onLogout, onNavigate, isAdmin }) => {
           <div>
              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Manage</h2>
             <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${isAdmin ? '5' : '4'} gap-6`}>
-                <button onClick={() => onNavigate('orders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+                <button onClick={() => onNavigate('orders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration[...]
                     <h3 className="text-xl font-bold text-purple-600 dark:text-purple-400">Orders</h3>
                     <p className="mt-2 text-gray-600 dark:text-gray-400">Manage sales orders.</p>
                 </button>
-                <button onClick={() => onNavigate('inventory')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+                <button onClick={() => onNavigate('inventory')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all durat[...]
                     <h3 className="text-xl font-bold text-indigo-600 dark:text-indigo-400">Inventory</h3>
                     <p className="mt-2 text-gray-600 dark:text-gray-400">Manage devices and stock.</p>
                 </button>
-                <button onClick={() => onNavigate('parts')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+                <button onClick={() => onNavigate('parts')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-[...]
                     <h3 className="text-xl font-bold text-green-600 dark:text-green-400">Parts</h3>
                     <p className="mt-2 text-gray-600 dark:text-gray-400">Browse and manage parts.</p>
                 </button>
-                <button onClick={() => onNavigate('archived')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+                <button onClick={() => onNavigate('archived')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all durati[...]
                     <h3 className="text-xl font-bold text-yellow-600 dark:text-yellow-400">Archived</h3>
                     <p className="mt-2 text-gray-600 dark:text-gray-400">View historical records.</p>
                 </button>
-                <button onClick={() => onNavigate('settings')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-center">
+                <button onClick={() => onNavigate('settings')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all durati[...]
                     <div className="flex items-center">
                         <CogIcon/>
                         <h3 className="text-xl font-bold text-gray-600 dark:text-gray-300">Settings</h3>
@@ -165,7 +166,7 @@ const Dashboard = ({ userProfile, onLogout, onNavigate, isAdmin }) => {
                 </button>
                 {/* --- Admin Only: Error Log Card --- */}
                 {isAdmin && (
-                    <button onClick={() => onNavigate('errorlog')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-center">
+                    <button onClick={() => onNavigate('errorlog')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all du[...]
                         <div className="flex items-center">
                             <ShieldExclamationIcon/>
                             <h3 className="text-xl font-bold text-red-600 dark:text-red-400">Error Log</h3>

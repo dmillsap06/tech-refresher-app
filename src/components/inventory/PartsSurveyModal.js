@@ -4,7 +4,8 @@ import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import logError from '../../utils/logError';
 import Modal from '../common/Modal';
 
-const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => {
+// Add userProfile to props
+const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose, userProfile }) => {
     const [goodParts, setGoodParts] = useState({});
     const [isSaving, setIsSaving] = useState(false);
 
@@ -70,7 +71,8 @@ const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => 
                         const newTotalValue = (existingData.totalValue || 0) + costPerHarvestedPart;
                         transaction.update(partRef, { 
                             quantity: newQuantity,
-                            totalValue: newTotalValue 
+                            totalValue: newTotalValue,
+                            groupId: userProfile?.groupId || null // reinforce groupId on update
                         });
                     } else {
                         transaction.set(partRef, {
@@ -80,14 +82,15 @@ const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => 
                             color: colorIdentifier,
                             quantity: 1,
                             totalValue: costPerHarvestedPart,
-                            createdAt: serverTimestamp()
+                            createdAt: serverTimestamp(),
+                            groupId: userProfile?.groupId || null // set groupId on creation
                         });
                     }
                 }
                 // Archive the item and delete from inventory
                 const inventoryItemRef = doc(db, "inventory", item.id);
                 const archivedItemRef = doc(db, "archivedInventory", item.id);
-                transaction.set(archivedItemRef, { ...item, status: 'Archived (Harvested)', archivedAt: serverTimestamp() });
+                transaction.set(archivedItemRef, { ...item, status: 'Archived (Harvested)', archivedAt: serverTimestamp(), groupId: userProfile?.groupId || null });
                 transaction.delete(inventoryItemRef);
             });
             showNotification('Item archived and parts harvested!', 'success');

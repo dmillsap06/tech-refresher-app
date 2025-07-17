@@ -7,7 +7,8 @@ import Modal from '../common/Modal'; // Import the new reusable Modal
 // --- Static list for conditions ---
 const conditions = ["New", "Used", "Refurbished", "For Parts"];
 
-const InventoryForm = ({ item, deviceConfig, showNotification, onClose }) => {
+// Added userProfile as prop
+const InventoryForm = ({ item, deviceConfig, showNotification, onClose, userProfile }) => {
     const [formData, setFormData] = useState({
         brand: item?.brand || Object.keys(deviceConfig)[0] || '',
         device: item?.device || '',
@@ -75,7 +76,8 @@ const InventoryForm = ({ item, deviceConfig, showNotification, onClose }) => {
             acqCost,
             partCost,
             totalCost,
-            status: formData.condition === 'For Parts' ? 'For Parts' : 'In Stock'
+            status: formData.condition === 'For Parts' ? 'For Parts' : 'In Stock',
+            groupId: userProfile?.groupId || null // <--- add groupId to every write
         };
         
         try {
@@ -98,7 +100,7 @@ const InventoryForm = ({ item, deviceConfig, showNotification, onClose }) => {
     const renderSelectField = (label, id, value, options, onChange, disabled = false) => (
         <div>
             <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
-            <select id={id} value={value} onChange={onChange} disabled={disabled} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md disabled:bg-gray-200 dark:disabled:bg-gray-600">
+            <select id={id} value={value} onChange={onChange} disabled={disabled} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:bg-gray-700 dark:border-gray-600 focus:out[...]
                 <option value="">Select...</option>
                 {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>
@@ -108,7 +110,7 @@ const InventoryForm = ({ item, deviceConfig, showNotification, onClose }) => {
     const renderInputField = (label, id, type = 'text', value, disabled = false) => (
         <div>
             <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
-            <input type={type} id={id} value={value} onChange={(e) => setFormData({...formData, [id]: e.target.value})} {...(type === 'number' && { step: '0.01' })} disabled={disabled} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-sm shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-200 dark:disabled:bg-gray-600" />
+            <input type={type} id={id} value={value} onChange={(e) => setFormData({...formData, [id]: e.target.value})} {...(type === 'number' && { step: '0.01' })} disabled={disabled} className="mt-1[...]
         </div>
     );
     
@@ -133,11 +135,11 @@ const InventoryForm = ({ item, deviceConfig, showNotification, onClose }) => {
                     </div>
                     <div className="mt-4">
                         <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
-                        <textarea id="notes" rows="3" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-sm shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        <textarea id="notes" rows="3" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="mt-1 block w-full px-3 py-2 bg-white dark:bg[...]
                     </div>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-900 px-6 py-3 flex justify-end space-x-4">
-                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300" disabled={isSaving}>Cancel</button>
+                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300" disable[...]
                     <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700" disabled={isSaving}>
                         {isSaving ? 'Saving...' : 'Save'}
                     </button>

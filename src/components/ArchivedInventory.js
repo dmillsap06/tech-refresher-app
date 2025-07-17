@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import logError from '../utils/logError';
 
 const ViewIcon = () => (
@@ -10,7 +10,7 @@ const ViewIcon = () => (
     </svg>
 );
 
-const ArchivedInventory = ({ onBack, showNotification }) => {
+const ArchivedInventory = ({ onBack, showNotification, userProfile }) => {
     const [archivedItems, setArchivedItems] = useState([]);
     const [filteredItems, setFilteredItems] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -19,8 +19,13 @@ const ArchivedInventory = ({ onBack, showNotification }) => {
     const [showDetailModal, setShowDetailModal] = useState(false);
 
     useEffect(() => {
+        if (!userProfile?.groupId) return;
         const archivedCollectionRef = collection(db, 'archivedInventory');
-        const q = query(archivedCollectionRef, orderBy('archivedAt', 'desc'));
+        const q = query(
+            archivedCollectionRef,
+            where('groupId', '==', userProfile.groupId),
+            orderBy('archivedAt', 'desc')
+        );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -33,7 +38,7 @@ const ArchivedInventory = ({ onBack, showNotification }) => {
         });
 
         return () => unsubscribe();
-    }, [showNotification]);
+    }, [showNotification, userProfile?.groupId]);
 
     useEffect(() => {
         const lowerCaseQuery = searchQuery.toLowerCase();

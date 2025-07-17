@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import logError from '../../utils/logError';
 import OrderForm from './OrderForm';
 import OrderDetailModal from './OrderDetailModal';
@@ -13,7 +13,8 @@ const ViewIcon = () => (
     </svg>
 );
 
-const OrdersPage = ({ onBack, showNotification }) => {
+// Now accepts userProfile as prop
+const OrdersPage = ({ onBack, showNotification, userProfile }) => {
     const [orders, setOrders] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -21,8 +22,14 @@ const OrdersPage = ({ onBack, showNotification }) => {
     const [selectedOrder, setSelectedOrder] = useState(null);
 
     useEffect(() => {
+        if (!userProfile?.groupId) return;
+        // Filter orders by groupId
         const ordersCollectionRef = collection(db, 'orders');
-        const q = query(ordersCollectionRef, orderBy('createdAt', 'desc'));
+        const q = query(
+            ordersCollectionRef,
+            where('groupId', '==', userProfile.groupId),
+            orderBy('createdAt', 'desc')
+        );
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setOrders(items);
@@ -33,7 +40,7 @@ const OrdersPage = ({ onBack, showNotification }) => {
             setIsLoading(false);
         });
         return () => unsubscribe();
-    }, [showNotification]);
+    }, [showNotification, userProfile?.groupId]);
 
     const handleViewDetails = (order) => {
         setSelectedOrder(order);
@@ -45,12 +52,12 @@ const OrdersPage = ({ onBack, showNotification }) => {
             <header className="bg-white dark:bg-gray-800 shadow-md">
                 <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
                     <div className="flex items-center">
-                        <button onClick={onBack} className="mr-4 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
+                        <button onClick={onBack} className="mr-4 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">
                             &larr; Dashboard
                         </button>
                         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Order Management</h1>
                     </div>
-                    <button onClick={() => setShowAddModal(true)} className="px-4 py-2 font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300">
+                    <button onClick={() => setShowAddModal(true)} className="px-4 py-2 font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-200">
                         Add New Order
                     </button>
                 </div>
@@ -90,7 +97,7 @@ const OrdersPage = ({ onBack, showNotification }) => {
                     </table>
                 </div>
             </main>
-            {showAddModal && <OrderForm showNotification={showNotification} onClose={() => setShowAddModal(false)} />}
+            {showAddModal && <OrderForm showNotification={showNotification} onClose={() => setShowAddModal(false)} userProfile={userProfile} />}
             {showDetailModal && <OrderDetailModal order={selectedOrder} onClose={() => setShowDetailModal(false)} />}
         </div>
     );
