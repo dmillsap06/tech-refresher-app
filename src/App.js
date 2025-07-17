@@ -12,7 +12,7 @@ import { auth, signIn } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import logError from './utils/logError';
 
-const ADMIN_USERS = ['dillonmillsap'];
+const ADMIN_USERS = ['dmillsap06'];
 
 function App() {
   const [userProfile, setUserProfile] = useState(null);

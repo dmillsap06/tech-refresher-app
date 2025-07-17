@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { db } from '../../firebase';
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import logError from '../../utils/logError';
-import Modal from '../common/Modal'; // Import the reusable Modal
+import Modal from '../common/Modal';
 
+//test
 const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => {
     const [goodParts, setGoodParts] = useState({});
     const [isSaving, setIsSaving] = useState(false);
@@ -17,21 +18,46 @@ const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => 
         const possibleParts = deviceConfig[item.brand]?.devices[item.device]?.parts || [];
         const partsToAdd = possibleParts.filter(part => goodParts[part.name]);
 
+        if (partsToAdd.length === 0) {
+            showNotification("Please select at least one good part to harvest.", "error");
+            setIsSaving(false);
+            return;
+        }
+
+        const costPerHarvestedPart = (item.totalCost || 0) / partsToAdd.length;
+
         try {
             await runTransaction(db, async (transaction) => {
-                for (const part of partsToAdd) {
+                // 1. Gather all refs and read all docs first
+                const partRefs = {};
+                const partDocs = {};
+                const partIds = partsToAdd.map(part => {
                     const colorIdentifier = part.hasColor ? item.color : 'N/A';
                     const deviceSlug = `${item.brand}-${item.device}`.toLowerCase().replace(/\s+/g, '-');
                     const partNameSlug = part.name.toLowerCase().replace(/\s+/g, '-');
                     const colorSlug = colorIdentifier.toLowerCase().replace(/\s+/g, '-').replace(/\//g,'');
                     const partId = `${deviceSlug}-${partNameSlug}-${colorSlug}`;
-
                     const partRef = doc(db, "parts", partId);
-                    const partDoc = await transaction.get(partRef);
+                    partRefs[partId] = partRef;
+                    return { part, partId, partRef, colorIdentifier };
+                });
 
+                // Perform all reads first
+                for (const { partId, partRef } of partIds) {
+                    partDocs[partId] = await transaction.get(partRef);
+                }
+
+                // Now do all writes
+                for (const { part, partId, partRef, colorIdentifier } of partIds) {
+                    const partDoc = partDocs[partId];
                     if (partDoc.exists()) {
-                        const newQuantity = (partDoc.data().quantity || 0) + 1;
-                        transaction.update(partRef, { quantity: newQuantity });
+                        const existingData = partDoc.data();
+                        const newQuantity = (existingData.quantity || 0) + 1;
+                        const newTotalValue = (existingData.totalValue || 0) + costPerHarvestedPart;
+                        transaction.update(partRef, { 
+                            quantity: newQuantity,
+                            totalValue: newTotalValue 
+                        });
                     } else {
                         transaction.set(partRef, {
                             brand: item.brand,
@@ -39,10 +65,12 @@ const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => 
                             partName: part.name,
                             color: colorIdentifier,
                             quantity: 1,
+                            totalValue: costPerHarvestedPart,
                             createdAt: serverTimestamp()
                         });
                     }
                 }
+                // Archive the item and delete from inventory
                 const inventoryItemRef = doc(db, "inventory", item.id);
                 const archivedItemRef = doc(db, "archivedInventory", item.id);
                 transaction.set(archivedItemRef, { ...item, status: 'Archived (Harvested)', archivedAt: serverTimestamp() });
@@ -89,7 +117,9 @@ const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => 
                 </div>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900 px-6 py-4 flex justify-end space-x-4">
-                <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300" disabled={isSaving}>Cancel</button>
+                <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300" disabled={isSaving}>
+                    Cancel
+                </button>
                 <button onClick={handleArchive} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700" disabled={isSaving || possibleParts.length === 0}>
                     {isSaving ? 'Archiving...' : 'Confirm & Archive'}
                 </button>
