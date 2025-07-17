@@ -1,17 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth } from '../firebase';
-import { doc, onSnapshot, setDoc, collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
+import { doc, onSnapshot, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import logError from '../utils/logError';
-
-const TrashIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 hover:text-red-500" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 012 0v6a1 1 0 11-2 0V7z" clipRule="evenodd" />
-    </svg>
-);
 
 const TABS = [
     { id: "profile", label: "Profile" },
-    { id: "catalog", label: "Device Catalog" },
     { id: "invite", label: "Invite User" },
     { id: "group", label: "Group Info" }
 ];
@@ -21,17 +14,6 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
 
     // --- Profile Tab State ---
     const [profile, setProfile] = useState(userProfile || {});
-
-    // --- Catalog Tab State (copied from your previous code) ---
-    const [brands, setBrands] = useState({});
-    const [isLoading, setIsLoading] = useState(true);
-    const [selectedBrand, setSelectedBrand] = useState(null);
-    const [selectedDevice, setSelectedDevice] = useState(null);
-    const [newBrand, setNewBrand] = useState('');
-    const [newDevice, setNewDevice] = useState({ name: '', type: 'Console' });
-    const [newColor, setNewColor] = useState('');
-    const [newPart, setNewPart] = useState({ name: '', hasColor: false });
-    const [newAccessory, setNewAccessory] = useState({ name: '', cost: 0 });
 
     // --- Invite Tab State ---
     const [inviteEmail, setInviteEmail] = useState('');
@@ -48,39 +30,6 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
     useEffect(() => {
         setProfile(userProfile || {});
     }, [userProfile]);
-
-    // ------------ CATALOG TAB EFFECT (original logic) -------------
-    useEffect(() => {
-        const configRef = doc(db, 'settings', 'deviceConfiguration');
-        const unsubscribe = onSnapshot(configRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                if (data.types && !data.brands) {
-                    const newBrandsStructure = {};
-                    for (const deviceType in data.types) {
-                        const brand = deviceType.split(' ')[0] || 'Unknown';
-                        if (!newBrandsStructure[brand]) {
-                            newBrandsStructure[brand] = { devices: {} };
-                        }
-                        newBrandsStructure[brand].devices[deviceType] = {
-                            type: 'Console',
-                            ...data.types[deviceType]
-                        };
-                    }
-                    setBrands(newBrandsStructure);
-                    setDoc(configRef, { brands: newBrandsStructure });
-                } else {
-                    setBrands(data.brands || {});
-                }
-            }
-            setIsLoading(false);
-        }, (error) => {
-            logError('Settings-Fetch', error);
-            showNotification('Failed to load settings.', 'error');
-            setIsLoading(false);
-        });
-        return () => unsubscribe();
-    }, [showNotification]);
 
     // ------------ GROUP TAB: Fetch group members -------------
     useEffect(() => {
@@ -102,23 +51,6 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
         if (activeTab === "group") fetchGroupMembers();
     }, [groupId, activeTab, showNotification]);
 
-
-    // ------------ CATALOG TAB HANDLERS (copied from your previous code) -------------
-    // ...[BRANDS, DEVICES, COLORS, PARTS, ACCESSORIES] logic unchanged, see previous code...
-
-    // (For brevity, I'm not repeating the catalog logic here, but you would copy all the device/brand/part handlers from your current file)
-
-    const handleAddBrand = async (e) => { /* ... identical ... */ };
-    const handleDeleteBrand = async (brandName) => { /* ... identical ... */ };
-    const handleAddDevice = async (e) => { /* ... identical ... */ };
-    const handleDeleteDevice = async (deviceName) => { /* ... identical ... */ };
-    const handleAddColor = async (e) => { /* ... identical ... */ };
-    const handleDeleteColor = async (colorToDelete) => { /* ... identical ... */ };
-    const handleAddPart = async (e) => { /* ... identical ... */ };
-    const handleDeletePart = async (partToDelete) => { /* ... identical ... */ };
-    const handleAddAccessory = async (e) => { /* ... identical ... */ };
-    const handleDeleteAccessory = async (accessoryToDelete) => { /* ... identical ... */ };
-
     // ------------ INVITE TAB HANDLER -------------
     const handleInviteUser = async (e) => {
         e.preventDefault();
@@ -132,8 +64,6 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
             }
 
             // Create new user document with role "user" in the same group
-            // Use a generated UID for the user doc (simulate registration by admin)
-            // In production, you'd send an invite email and let them finish registration!
             const newUserProfile = {
                 username: inviteUsername.trim(),
                 email: inviteEmail.trim(),
@@ -206,17 +136,6 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
                     </div>
                 )}
 
-                {/* CATALOG */}
-                {activeTab === "catalog" && (
-                    // --- Paste your full device/brand/settings code block here ---
-                    // Use all the original catalog code from your previous Settings.js (as in your latest version)
-                    // ...
-                    <div>
-                        {/* (Paste your Catalog logic here, unchanged from above) */}
-                        {/* For brevity, not repeating the whole catalog code here */}
-                    </div>
-                )}
-
                 {/* INVITE */}
                 {activeTab === "invite" && (
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg max-w-lg mx-auto">
@@ -284,7 +203,6 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
                                         {member.firstName} {member.lastName} ({member.username}) - <span className="capitalize">{member.role}</span>
                                         {member.email === userProfile.email ? " (You)" : ""}
                                     </span>
-                                    {/* Optional: Remove member button for admins (not implemented here) */}
                                 </li>
                             ))}
                         </ul>
