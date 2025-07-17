@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Login from './components/Login';
+import AuthPage from './components/auth/AuthPage';
 import Dashboard from './components/Dashboard';
 import InventoryPage from './components/inventory/InventoryPage';
 import Settings from './components/Settings';
@@ -29,20 +29,12 @@ function App() {
         setUserProfile(null);
         setIsAdmin(false);
       } else {
-        // Fetch user profile from Firestore
-        // We use the username stored as a document key in /users collection
-        // Option 1: If you store by username
-        // Option 2: If you store by uid, use user.uid
         let profile = null;
-        // Try by uid first (recommended for uniqueness)
         let userRef = doc(db, 'users', user.uid);
         let userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           profile = userSnap.data();
         } else {
-          // fallback: try by email or username
-          // You may need to search by email if username is not unique
-          // For now, let's just fallback to null
           profile = null;
         }
         if (profile) {
@@ -125,7 +117,7 @@ function App() {
         onClose={() => setNotification({ message: '', type: '' })}
       />
       {!userProfile ? (
-        <Login onLogin={handleLogin} showNotification={showNotification} />
+        <AuthPage onLogin={handleLogin} showNotification={showNotification} />
       ) : (
         renderPage()
       )}
