@@ -4,6 +4,7 @@ import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import logError from '../../utils/logError';
 import Modal from '../common/Modal';
 
+//test
 const PartsSurveyModal = ({ item, deviceConfig, showNotification, onClose }) => {
     const [goodParts, setGoodParts] = useState({});
     const [isSaving, setIsSaving] = useState(false);
