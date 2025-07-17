@@ -2,6 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 
+// Simple checkmark icon for resolved, and a subtle check-circle for resolve action
+const CheckCircleIcon = ({ className = "" }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="2" fill="none" />
+        <path d="M6.5 10.5l2 2 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+);
+
+const CheckIcon = ({ className = "" }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 20 20">
+        <path d="M6 10.5l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+);
+
 const ErrorLog = ({ onBack }) => {
     const [errorLogs, setErrorLogs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -80,12 +94,16 @@ const ErrorLog = ({ onBack }) => {
                                             <button
                                                 onClick={() => markResolved(log.id)}
                                                 disabled={updating[log.id]}
-                                                className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-60"
+                                                title="Resolve"
+                                                className="group p-1 rounded-full hover:bg-green-100 dark:hover:bg-green-900 transition"
+                                                style={{ minWidth: 0, minHeight: 0, border: 'none', background: 'none' }}
                                             >
-                                                {updating[log.id] ? "Marking..." : "Mark as Resolved"}
+                                                <CheckCircleIcon className={`w-5 h-5 text-green-600 group-hover:text-green-800 dark:group-hover:text-green-400 ${updating[log.id] ? 'animate-pulse opacity-60' : ''}`} />
                                             </button>
                                         ) : (
-                                            <span className="text-green-500">&#10003;</span>
+                                            <span title="Resolved">
+                                                <CheckIcon className="w-5 h-5 text-green-500" />
+                                            </span>
                                         )}
                                     </td>
                                 </tr>
