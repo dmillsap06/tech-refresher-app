@@ -42,7 +42,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       };
-      const docRef = await addDoc(collection(db, 'purchase_orders'), poData);
+      await addDoc(collection(db, 'purchase_orders'), poData);
       // Optionally, set poNumber to docRef.id or a custom format here
       showNotification('Purchase Order created!', 'success');
       onClose();
