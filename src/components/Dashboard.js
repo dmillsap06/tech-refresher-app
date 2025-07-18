@@ -4,13 +4,25 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import logError from '../utils/logError';
 
 // --- Icon Components ---
-
 const BanknotesIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <rect x="2" y="7" width="20" height="10" rx="2" fill="currentColor" opacity="0.1"/>
     <rect x="2" y="7" width="20" height="10" rx="2" stroke="currentColor" strokeWidth={2}/>
     <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth={2}/>
     <path d="M7 10h.01M17 14h.01" stroke="currentColor" strokeWidth={2} strokeLinecap="round"/>
+  </svg>
+);
+
+const TrendingUpIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+  </svg>
+);
+
+const ArchiveBoxIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" strokeWidth={2} />
+    <path d="M3 6l9 6 9-6" stroke="currentColor" strokeWidth={2} />
   </svg>
 );
 
@@ -33,13 +45,6 @@ const WrenchIcon = () => (
   </svg>
 );
 
-const ArchiveBoxIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" strokeWidth={2} />
-    <path d="M3 6l9 6 9-6" stroke="currentColor" strokeWidth={2} />
-  </svg>
-);
-
 const CogIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v2m0 12v2m8-8h2M4 12H2m15.364-6.364l1.414 1.414M6.343 17.657l-1.414 1.414m0-13.071l1.414 1.414M17.657 17.657l1.414-1.414M12 8a4 4 0 100 8 4 4 0 000-8z" />
@@ -53,9 +58,11 @@ const ShieldExclamationIcon = () => (
   </svg>
 );
 
-const TrendingUpIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+const ClipboardDocumentIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <rect x="6" y="4" width="12" height="16" rx="2" stroke="currentColor" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 4V2.5a.5.5 0 01.5-.5h5a.5.5 0 01.5.5V4" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 10h6M9 14h6" />
   </svg>
 );
 
@@ -167,7 +174,7 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
 
           <div>
             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Manage</h2>
-            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${isSuperAdmin ? '6' : '4'} gap-6`}>
+            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${isSuperAdmin ? '7' : '5'} gap-6`}>
               <button onClick={() => onNavigate('orders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center mb-2">
                   <ClipboardCheckIcon />
@@ -195,6 +202,13 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
                   <h3 className="ml-2 text-xl font-bold text-yellow-600 dark:text-yellow-400">Archived</h3>
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">View historical records.</p>
+              </button>
+              <button onClick={() => onNavigate('purchaseorders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <div className="flex items-center mb-2">
+                  <ClipboardDocumentIcon />
+                  <h3 className="ml-2 text-xl font-bold text-orange-600 dark:text-orange-400">Purchase Orders</h3>
+                </div>
+                <p className="mt-2 text-gray-600 dark:text-gray-400">View, create, and receive purchase orders.</p>
               </button>
               {isSuperAdmin && (
                 <>
