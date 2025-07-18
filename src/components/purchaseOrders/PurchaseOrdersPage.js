@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import PurchaseOrderForm from './PurchaseOrderForm';
@@ -11,9 +11,13 @@ const PurchaseOrdersPage = ({ userProfile, showNotification, onBack }) => {
   const [selectedPO, setSelectedPO] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Prevents repeated error logging/notifications
+  const errorReported = useRef(false);
+
   useEffect(() => {
     if (!userProfile?.groupId) return;
     setLoading(true);
+    errorReported.current = false; // reset when group changes
     try {
       const q = query(
         collection(db, 'purchase_orders'),
@@ -25,16 +29,23 @@ const PurchaseOrdersPage = ({ userProfile, showNotification, onBack }) => {
           snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
         );
         setLoading(false);
+        errorReported.current = false; // reset on successful fetch
       }, err => {
-        logError('PurchaseOrdersPage-List', err);
-        setLoading(false);
-        showNotification('Failed to load purchase orders: ' + err.message, 'error');
+        if (!errorReported.current) {
+          logError('PurchaseOrdersPage-List', err);
+          setLoading(false);
+          showNotification('Failed to load purchase orders: ' + err.message, 'error');
+          errorReported.current = true;
+        }
       });
       return () => unsub();
     } catch (err) {
-      logError('PurchaseOrdersPage-List', err);
-      setLoading(false);
-      showNotification('Failed to load purchase orders: ' + err.message, 'error');
+      if (!errorReported.current) {
+        logError('PurchaseOrdersPage-List', err);
+        setLoading(false);
+        showNotification('Failed to load purchase orders: ' + err.message, 'error');
+        errorReported.current = true;
+      }
     }
   }, [userProfile, showNotification]);
 

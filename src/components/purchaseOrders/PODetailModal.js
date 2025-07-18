@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import logError from '../../utils/logError';
@@ -30,6 +30,9 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     status: po.status,
   }));
   const [saving, setSaving] = useState(false);
+
+  // Prevent endless error logging/notifications
+  const errorReported = useRef(false);
 
   const canEdit = formState.status === 'Created' && userProfile.groupId === po.groupId;
 
@@ -95,6 +98,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
 
   const saveEdits = async () => {
     setSaving(true);
+    errorReported.current = false; // Reset on new attempt
     try {
       await updateDoc(doc(db, 'purchase_orders', po.id), {
         vendor: formState.vendor,
@@ -117,8 +121,11 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
       showNotification('PO updated!', 'success');
       setEditMode(false);
     } catch (err) {
-      logError('PODetailModal-Update', err);
-      showNotification('Failed to update PO: ' + err.message, 'error');
+      if (!errorReported.current) {
+        logError('PODetailModal-Update', err);
+        showNotification('Failed to update PO: ' + err.message, 'error');
+        errorReported.current = true;
+      }
     } finally {
       setSaving(false);
     }

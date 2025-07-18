@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { db } from '../../firebase';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import logError from '../../utils/logError';
@@ -27,6 +27,9 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const [tax, setTax] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  // Prevent endless error logging/notifications
+  const errorReported = useRef(false);
+
   const handleLineChange = (index, field, value) => {
     setLineItems(items => items.map((item, i) => i === index ? { ...item, [field]: value } : item));
   };
@@ -39,10 +42,8 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   );
   const total = subtotal + Number(tax || 0) + Number(shippingCost || 0) + Number(otherFees || 0);
 
-  // For dollar fields: allow only numbers and one dot, but keep as string for easier typing
   const handleDollarChange = setter => e => {
     let val = e.target.value.replace(/[^0-9.]/g, '');
-    // Prevent multiple decimals
     if ((val.match(/\./g) || []).length > 1) return;
     setter(val);
   };
@@ -74,9 +75,10 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
+    errorReported.current = false; // Reset on new attempt
     try {
       const poData = {
-        poNumber: '', // Optionally set later
+        poNumber: '',
         vendor,
         vendorOrderNumber,
         date: Timestamp.fromDate(new Date(date)),
@@ -100,8 +102,11 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
       showNotification('Purchase Order created!', 'success');
       onClose();
     } catch (err) {
-      logError('PurchaseOrderForm-Submit', err);
-      showNotification('Failed to create PO: ' + err.message, 'error');
+      if (!errorReported.current) {
+        logError('PurchaseOrderForm-Submit', err);
+        showNotification('Failed to create PO: ' + err.message, 'error');
+        errorReported.current = true;
+      }
     } finally {
       setIsSaving(false);
     }
