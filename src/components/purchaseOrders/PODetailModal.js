@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import logError from '../../utils/logError';
+import POReceiveModal from './POReceiveModal';
 
 const inputClass =
   "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
@@ -11,6 +12,13 @@ const dollarPrefix = "absolute left-2 inset-y-0 flex items-center text-gray-400 
 function formatMoney(val) {
   if (val === '' || isNaN(val)) return '';
   return Number(val).toFixed(2);
+}
+
+function formatDate(dt) {
+  if (!dt) return '-';
+  if (typeof dt === 'string') return new Date(dt).toLocaleString();
+  if (dt.toDate) return dt.toDate().toLocaleString();
+  return dt.toLocaleString();
 }
 
 const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
@@ -30,11 +38,14 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     status: po.status,
   }));
   const [saving, setSaving] = useState(false);
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
 
   // Prevent endless error logging/notifications
   const errorReported = useRef(false);
 
   const canEdit = formState.status === 'Created' && userProfile.groupId === po.groupId;
+
+  const canReceive = (po.status === 'Created' || po.status === 'Partially Received');
 
   const subtotal = formState.lineItems.reduce(
     (sum, li) => sum + (Number(li.quantity) * Number(li.unitPrice || 0)), 0
@@ -53,7 +64,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const handleAddLine = () => {
     setFormState(state => ({
       ...state,
-      lineItems: [...state.lineItems, { description: '', quantity: 1, unitPrice: '', category: 'Inventory', notes: '' }]
+      lineItems: [...state.lineItems, { description: '', quantity: 1, unitPrice: '', category: 'Inventory', notes: '', quantityReceived: 0 }]
     }));
   };
 
@@ -108,7 +119,8 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
         lineItems: formState.lineItems.map(li => ({
           ...li,
           unitPrice: li.unitPrice === '' ? 0 : Number(li.unitPrice),
-          quantity: Number(li.quantity)
+          quantity: Number(li.quantity),
+          quantityReceived: typeof li.quantityReceived === 'number' ? li.quantityReceived : 0,
         })),
         shippingCost: formState.shippingCost === '' ? 0 : Number(formState.shippingCost),
         otherFees: formState.otherFees === '' ? 0 : Number(formState.otherFees),
@@ -130,6 +142,9 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
       setSaving(false);
     }
   };
+
+  // Render status history if present
+  const statusHistory = po.statusHistory || [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
@@ -179,7 +194,8 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
             <thead>
               <tr>
                 <th className="px-2 py-1">Description</th>
-                <th className="px-2 py-1">Qty</th>
+                <th className="px-2 py-1">Qty Ordered</th>
+                <th className="px-2 py-1">Qty Received</th>
                 <th className="px-2 py-1">Unit Price</th>
                 <th className="px-2 py-1">Category</th>
                 <th className="px-2 py-1">Notes</th>
@@ -202,6 +218,11 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                         onChange={e => handleLineChange(idx, 'quantity', e.target.value)}
                         required />
                     ) : item.quantity}
+                  </td>
+                  <td>
+                    {typeof item.quantityReceived === 'number'
+                      ? item.quantityReceived
+                      : 0}
                   </td>
                   <td>
                     {editMode ? (
@@ -339,8 +360,36 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
           <label className="block font-medium mb-1">Status</label>
           <div>{formState.status}</div>
         </div>
+        {/* Status History */}
+        <div className="mb-6">
+          <label className="block font-medium mb-1">Status History</label>
+          {statusHistory.length === 0 ? (
+            <div className="text-gray-400 text-sm">No status changes recorded yet.</div>
+          ) : (
+            <ul className="text-sm bg-gray-100 dark:bg-gray-700 rounded p-2 space-y-1 max-h-32 overflow-y-auto">
+              {statusHistory.map((entry, i) => (
+                <li key={i}>
+                  <span className="font-semibold">{entry.status}</span>
+                  {" by "}
+                  <span>{entry.by}</span>
+                  {" on "}
+                  <span title={formatDate(entry.at)}>{formatDate(entry.at)}</span>
+                  {entry.note ? <>: <span className="italic">{entry.note}</span></> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         {/* Buttons */}
         <div className="flex justify-end gap-3 mt-5">
+          {canReceive && (
+            <button
+              type="button"
+              className="px-5 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700"
+              onClick={() => setShowReceiveModal(true)}
+            >Receive
+            </button>
+          )}
           {editMode ? (
             <>
               <button
@@ -385,6 +434,14 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
           >Close
           </button>
         </div>
+        {showReceiveModal && (
+          <POReceiveModal
+            po={po}
+            userProfile={userProfile}
+            showNotification={showNotification}
+            onClose={() => setShowReceiveModal(false)}
+          />
+        )}
       </div>
     </div>
   );
