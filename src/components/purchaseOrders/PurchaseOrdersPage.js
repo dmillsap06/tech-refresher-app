@@ -3,6 +3,7 @@ import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestor
 import { db } from '../../firebase';
 import PurchaseOrderForm from './PurchaseOrderForm';
 import PODetailModal from './PODetailModal';
+import logError from '../../utils/logError';
 
 const PurchaseOrdersPage = ({ userProfile, showNotification, onBack }) => {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
@@ -13,19 +14,29 @@ const PurchaseOrdersPage = ({ userProfile, showNotification, onBack }) => {
   useEffect(() => {
     if (!userProfile?.groupId) return;
     setLoading(true);
-    const q = query(
-      collection(db, 'purchase_orders'),
-      where('groupId', '==', userProfile.groupId),
-      orderBy('date', 'desc')
-    );
-    const unsub = onSnapshot(q, snapshot => {
-      setPurchaseOrders(
-        snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    try {
+      const q = query(
+        collection(db, 'purchase_orders'),
+        where('groupId', '==', userProfile.groupId),
+        orderBy('date', 'desc')
       );
+      const unsub = onSnapshot(q, snapshot => {
+        setPurchaseOrders(
+          snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        );
+        setLoading(false);
+      }, err => {
+        logError('PurchaseOrdersPage-List', err);
+        setLoading(false);
+        showNotification('Failed to load purchase orders: ' + err.message, 'error');
+      });
+      return () => unsub();
+    } catch (err) {
+      logError('PurchaseOrdersPage-List', err);
       setLoading(false);
-    });
-    return () => unsub();
-  }, [userProfile]);
+      showNotification('Failed to load purchase orders: ' + err.message, 'error');
+    }
+  }, [userProfile, showNotification]);
 
   return (
     <div className="max-w-5xl mx-auto mt-8 p-6 bg-white dark:bg-gray-900 rounded-lg shadow-lg min-h-[80vh]">

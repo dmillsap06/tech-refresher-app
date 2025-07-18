@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { db } from '../../firebase';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import logError from '../../utils/logError';
 
-const defaultLineItem = { description: '', quantity: 1, unitPrice: 0, category: 'Inventory', notes: '' };
+const defaultLineItem = { description: '', quantity: 1, unitPrice: '', category: 'Inventory', notes: '' };
 
 const inputClass =
   "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
 const dollarInputWrapper = "relative";
-const dollarPrefix = "absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none";
+const dollarPrefix = "absolute left-2 inset-y-0 flex items-center text-gray-400 pointer-events-none";
 
 function formatMoney(val) {
   if (val === '' || isNaN(val)) return '';
@@ -21,9 +22,9 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const [status] = useState('Created');
   const [notes, setNotes] = useState('');
   const [lineItems, setLineItems] = useState([{ ...defaultLineItem }]);
-  const [shippingCost, setShippingCost] = useState(0);
-  const [otherFees, setOtherFees] = useState(0);
-  const [tax, setTax] = useState(0);
+  const [shippingCost, setShippingCost] = useState('');
+  const [otherFees, setOtherFees] = useState('');
+  const [tax, setTax] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleLineChange = (index, field, value) => {
@@ -33,44 +34,41 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const handleAddLine = () => setLineItems(items => [...items, { ...defaultLineItem }]);
   const handleRemoveLine = (index) => setLineItems(items => items.filter((_, i) => i !== index));
 
-  const subtotal = lineItems.reduce((sum, li) => sum + (Number(li.quantity) * Number(li.unitPrice)), 0);
-  const total = subtotal + Number(tax) + Number(shippingCost) + Number(otherFees);
+  const subtotal = lineItems.reduce((sum, li) =>
+    sum + (Number(li.quantity) * Number(li.unitPrice || 0)), 0
+  );
+  const total = subtotal + Number(tax || 0) + Number(shippingCost || 0) + Number(otherFees || 0);
 
-  const handleNumberInput = setter => e => {
-    // Allow only valid number input, always with 2 decimals
+  // For dollar fields: allow only numbers and one dot, but keep as string for easier typing
+  const handleDollarChange = setter => e => {
     let val = e.target.value.replace(/[^0-9.]/g, '');
-    if (val === '' || isNaN(val)) {
+    // Prevent multiple decimals
+    if ((val.match(/\./g) || []).length > 1) return;
+    setter(val);
+  };
+
+  const handleDollarBlur = setter => e => {
+    let val = e.target.value;
+    if (!val || isNaN(val)) {
       setter('');
       return;
     }
-    setter(parseFloat(val));
+    setter(Number(val).toFixed(2));
   };
 
-  const handleMoneyBlur = setter => e => {
+  const handleLineDollarChange = (index, field) => e => {
     let val = e.target.value.replace(/[^0-9.]/g, '');
-    if (val === '' || isNaN(val)) {
-      setter(0);
-      return;
-    }
-    setter(Number(parseFloat(val).toFixed(2)));
+    if ((val.match(/\./g) || []).length > 1) return;
+    handleLineChange(index, field, val);
   };
 
-  const handleLineMoneyInput = (index, field) => e => {
-    let val = e.target.value.replace(/[^0-9.]/g, '');
-    if (val === '' || isNaN(val)) {
+  const handleLineDollarBlur = (index, field) => e => {
+    let val = e.target.value;
+    if (!val || isNaN(val)) {
       handleLineChange(index, field, '');
       return;
     }
-    handleLineChange(index, field, parseFloat(val));
-  };
-
-  const handleLineMoneyBlur = (index, field) => e => {
-    let val = e.target.value.replace(/[^0-9.]/g, '');
-    if (val === '' || isNaN(val)) {
-      handleLineChange(index, field, 0);
-      return;
-    }
-    handleLineChange(index, field, Number(parseFloat(val).toFixed(2)));
+    handleLineChange(index, field, Number(val).toFixed(2));
   };
 
   const handleSubmit = async (e) => {
@@ -85,11 +83,15 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
         status,
         notes,
         groupId: userProfile.groupId,
-        lineItems,
+        lineItems: lineItems.map(li => ({
+          ...li,
+          unitPrice: li.unitPrice === '' ? 0 : Number(li.unitPrice),
+          quantity: Number(li.quantity)
+        })),
         subtotal,
-        shippingCost: Number(shippingCost),
-        otherFees: Number(otherFees),
-        tax: Number(tax),
+        shippingCost: shippingCost === '' ? 0 : Number(shippingCost),
+        otherFees: otherFees === '' ? 0 : Number(otherFees),
+        tax: tax === '' ? 0 : Number(tax),
         total,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
@@ -98,6 +100,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
       showNotification('Purchase Order created!', 'success');
       onClose();
     } catch (err) {
+      logError('PurchaseOrderForm-Submit', err);
       showNotification('Failed to create PO: ' + err.message, 'error');
     } finally {
       setIsSaving(false);
@@ -106,7 +109,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-4xl relative"> {/* Modal is bigger */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-3xl relative">
         <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
         <h2 className="text-xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">New Purchase Order</h2>
         <form onSubmit={handleSubmit}>
@@ -158,14 +161,14 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                       <div className={dollarInputWrapper}>
                         <span className={dollarPrefix}>$</span>
                         <input
-                          type="number"
+                          type="text"
                           className={inputClass + " pl-6"}
-                          value={item.unitPrice === '' ? '' : formatMoney(item.unitPrice)}
+                          value={item.unitPrice}
                           min={0}
                           step="0.01"
                           style={{ width: 90 }}
-                          onChange={handleLineMoneyInput(idx, 'unitPrice')}
-                          onBlur={handleLineMoneyBlur(idx, 'unitPrice')}
+                          onChange={handleLineDollarChange(idx, 'unitPrice')}
+                          onBlur={handleLineDollarBlur(idx, 'unitPrice')}
                           required
                           inputMode="decimal"
                           pattern="^\d+(\.\d{1,2})?$"
@@ -199,13 +202,13 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
               <div className={dollarInputWrapper}>
                 <span className={dollarPrefix}>$</span>
                 <input
-                  type="number"
+                  type="text"
                   className={inputClass + " pl-6"}
-                  value={shippingCost === '' ? '' : formatMoney(shippingCost)}
+                  value={shippingCost}
                   min={0}
                   step="0.01"
-                  onChange={handleNumberInput(setShippingCost)}
-                  onBlur={handleMoneyBlur(setShippingCost)}
+                  onChange={handleDollarChange(setShippingCost)}
+                  onBlur={handleDollarBlur(setShippingCost)}
                   inputMode="decimal"
                   pattern="^\d+(\.\d{1,2})?$"
                 />
@@ -216,13 +219,13 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
               <div className={dollarInputWrapper}>
                 <span className={dollarPrefix}>$</span>
                 <input
-                  type="number"
+                  type="text"
                   className={inputClass + " pl-6"}
-                  value={otherFees === '' ? '' : formatMoney(otherFees)}
+                  value={otherFees}
                   min={0}
                   step="0.01"
-                  onChange={handleNumberInput(setOtherFees)}
-                  onBlur={handleMoneyBlur(setOtherFees)}
+                  onChange={handleDollarChange(setOtherFees)}
+                  onBlur={handleDollarBlur(setOtherFees)}
                   inputMode="decimal"
                   pattern="^\d+(\.\d{1,2})?$"
                 />
@@ -240,13 +243,13 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
               <div className={dollarInputWrapper + " w-20"}>
                 <span className={dollarPrefix}>$</span>
                 <input
-                  type="number"
+                  type="text"
                   className={inputClass + " pl-6"}
-                  value={tax === '' ? '' : formatMoney(tax)}
+                  value={tax}
                   min={0}
                   step="0.01"
-                  onChange={handleNumberInput(setTax)}
-                  onBlur={handleMoneyBlur(setTax)}
+                  onChange={handleDollarChange(setTax)}
+                  onBlur={handleDollarBlur(setTax)}
                   inputMode="decimal"
                   pattern="^\d+(\.\d{1,2})?$"
                 />

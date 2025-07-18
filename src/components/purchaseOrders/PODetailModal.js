@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import logError from '../../utils/logError';
 
 const inputClass =
   "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
 const dollarInputWrapper = "relative";
-const dollarPrefix = "absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none";
+const dollarPrefix = "absolute left-2 inset-y-0 flex items-center text-gray-400 pointer-events-none";
 
 function formatMoney(val) {
   if (val === '' || isNaN(val)) return '';
@@ -19,10 +20,13 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     vendorOrderNumber: po.vendorOrderNumber || '',
     date: po.date?.toDate?.().toISOString().substr(0, 10) || '',
     notes: po.notes || '',
-    lineItems: po.lineItems?.map(li => ({ ...li })) || [],
-    shippingCost: po.shippingCost ?? 0,
-    otherFees: po.otherFees ?? 0,
-    tax: po.tax ?? 0,
+    lineItems: po.lineItems?.map(li => ({
+      ...li,
+      unitPrice: li.unitPrice === 0 ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice)
+    })) || [],
+    shippingCost: po.shippingCost === 0 ? '' : (typeof po.shippingCost === 'number' ? po.shippingCost.toFixed(2) : po.shippingCost),
+    otherFees: po.otherFees === 0 ? '' : (typeof po.otherFees === 'number' ? po.otherFees.toFixed(2) : po.otherFees),
+    tax: po.tax === 0 ? '' : (typeof po.tax === 'number' ? po.tax.toFixed(2) : po.tax),
     status: po.status,
   }));
   const [saving, setSaving] = useState(false);
@@ -30,9 +34,9 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const canEdit = formState.status === 'Created' && userProfile.groupId === po.groupId;
 
   const subtotal = formState.lineItems.reduce(
-    (sum, li) => sum + (Number(li.quantity) * Number(li.unitPrice)), 0
+    (sum, li) => sum + (Number(li.quantity) * Number(li.unitPrice || 0)), 0
   );
-  const total = subtotal + Number(formState.tax) + Number(formState.shippingCost) + Number(formState.otherFees);
+  const total = subtotal + Number(formState.tax || 0) + Number(formState.shippingCost || 0) + Number(formState.otherFees || 0);
 
   const handleLineChange = (index, field, value) => {
     setFormState(state => ({
@@ -46,7 +50,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const handleAddLine = () => {
     setFormState(state => ({
       ...state,
-      lineItems: [...state.lineItems, { description: '', quantity: 1, unitPrice: 0, category: 'Inventory', notes: '' }]
+      lineItems: [...state.lineItems, { description: '', quantity: 1, unitPrice: '', category: 'Inventory', notes: '' }]
     }));
   };
 
@@ -57,30 +61,32 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     }));
   };
 
-  const handleNumberInput = (field) => e => {
+  const handleDollarChange = (field) => e => {
     let val = e.target.value.replace(/[^0-9.]/g, '');
+    if ((val.match(/\./g) || []).length > 1) return;
     setFormState(state => ({
       ...state,
-      [field]: val === '' || isNaN(val) ? '' : parseFloat(val)
+      [field]: val
     }));
   };
 
-  const handleMoneyBlur = (field) => e => {
-    let val = e.target.value.replace(/[^0-9.]/g, '');
+  const handleDollarBlur = (field) => e => {
+    let val = e.target.value;
     setFormState(state => ({
       ...state,
-      [field]: val === '' || isNaN(val) ? 0 : Number(parseFloat(val).toFixed(2))
+      [field]: (!val || isNaN(val)) ? '' : Number(val).toFixed(2)
     }));
   };
 
-  const handleLineMoneyInput = (index, field) => e => {
+  const handleLineDollarChange = (index, field) => e => {
     let val = e.target.value.replace(/[^0-9.]/g, '');
-    handleLineChange(index, field, val === '' || isNaN(val) ? '' : parseFloat(val));
+    if ((val.match(/\./g) || []).length > 1) return;
+    handleLineChange(index, field, val);
   };
 
-  const handleLineMoneyBlur = (index, field) => e => {
-    let val = e.target.value.replace(/[^0-9.]/g, '');
-    handleLineChange(index, field, val === '' || isNaN(val) ? 0 : Number(parseFloat(val).toFixed(2)));
+  const handleLineDollarBlur = (index, field) => e => {
+    let val = e.target.value;
+    handleLineChange(index, field, (!val || isNaN(val)) ? '' : Number(val).toFixed(2));
   };
 
   const handleInput = field => e => {
@@ -95,10 +101,14 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
         vendorOrderNumber: formState.vendorOrderNumber,
         date: new Date(formState.date),
         notes: formState.notes,
-        lineItems: formState.lineItems,
-        shippingCost: Number(formState.shippingCost),
-        otherFees: Number(formState.otherFees),
-        tax: Number(formState.tax),
+        lineItems: formState.lineItems.map(li => ({
+          ...li,
+          unitPrice: li.unitPrice === '' ? 0 : Number(li.unitPrice),
+          quantity: Number(li.quantity)
+        })),
+        shippingCost: formState.shippingCost === '' ? 0 : Number(formState.shippingCost),
+        otherFees: formState.otherFees === '' ? 0 : Number(formState.otherFees),
+        tax: formState.tax === '' ? 0 : Number(formState.tax),
         status: formState.status,
         subtotal,
         total,
@@ -107,6 +117,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
       showNotification('PO updated!', 'success');
       setEditMode(false);
     } catch (err) {
+      logError('PODetailModal-Update', err);
       showNotification('Failed to update PO: ' + err.message, 'error');
     } finally {
       setSaving(false);
@@ -190,14 +201,14 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                       <div className={dollarInputWrapper}>
                         <span className={dollarPrefix}>$</span>
                         <input
-                          type="number"
+                          type="text"
                           className={inputClass + " pl-6"}
-                          value={item.unitPrice === '' ? '' : formatMoney(item.unitPrice)}
+                          value={item.unitPrice}
                           min={0}
                           step="0.01"
                           style={{ width: 90 }}
-                          onChange={handleLineMoneyInput(idx, 'unitPrice')}
-                          onBlur={handleLineMoneyBlur(idx, 'unitPrice')}
+                          onChange={handleLineDollarChange(idx, 'unitPrice')}
+                          onBlur={handleLineDollarBlur(idx, 'unitPrice')}
                           required
                           inputMode="decimal"
                           pattern="^\d+(\.\d{1,2})?$"
@@ -247,13 +258,13 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
               <div className={dollarInputWrapper}>
                 <span className={dollarPrefix}>$</span>
                 <input
-                  type="number"
+                  type="text"
                   className={inputClass + " pl-6"}
-                  value={formState.shippingCost === '' ? '' : formatMoney(formState.shippingCost)}
+                  value={formState.shippingCost}
                   min={0}
                   step="0.01"
-                  onChange={handleNumberInput('shippingCost')}
-                  onBlur={handleMoneyBlur('shippingCost')}
+                  onChange={handleDollarChange('shippingCost')}
+                  onBlur={handleDollarBlur('shippingCost')}
                   inputMode="decimal"
                   pattern="^\d+(\.\d{1,2})?$"
                 />
@@ -268,13 +279,13 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
               <div className={dollarInputWrapper}>
                 <span className={dollarPrefix}>$</span>
                 <input
-                  type="number"
+                  type="text"
                   className={inputClass + " pl-6"}
-                  value={formState.otherFees === '' ? '' : formatMoney(formState.otherFees)}
+                  value={formState.otherFees}
                   min={0}
                   step="0.01"
-                  onChange={handleNumberInput('otherFees')}
-                  onBlur={handleMoneyBlur('otherFees')}
+                  onChange={handleDollarChange('otherFees')}
+                  onBlur={handleDollarBlur('otherFees')}
                   inputMode="decimal"
                   pattern="^\d+(\.\d{1,2})?$"
                 />
@@ -296,13 +307,13 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
               <div className={dollarInputWrapper + " w-20"}>
                 <span className={dollarPrefix}>$</span>
                 <input
-                  type="number"
+                  type="text"
                   className={inputClass + " pl-6"}
-                  value={formState.tax === '' ? '' : formatMoney(formState.tax)}
+                  value={formState.tax}
                   min={0}
                   step="0.01"
-                  onChange={handleNumberInput('tax')}
-                  onBlur={handleMoneyBlur('tax')}
+                  onChange={handleDollarChange('tax')}
+                  onBlur={handleDollarBlur('tax')}
                   inputMode="decimal"
                   pattern="^\d+(\.\d{1,2})?$"
                 />
@@ -333,10 +344,13 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                   vendorOrderNumber: po.vendorOrderNumber || '',
                   date: po.date?.toDate?.().toISOString().substr(0, 10) || '',
                   notes: po.notes || '',
-                  lineItems: po.lineItems?.map(li => ({ ...li })) || [],
-                  shippingCost: po.shippingCost ?? 0,
-                  otherFees: po.otherFees ?? 0,
-                  tax: po.tax ?? 0,
+                  lineItems: po.lineItems?.map(li => ({
+                    ...li,
+                    unitPrice: li.unitPrice === 0 ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice)
+                  })) || [],
+                  shippingCost: po.shippingCost === 0 ? '' : (typeof po.shippingCost === 'number' ? po.shippingCost.toFixed(2) : po.shippingCost),
+                  otherFees: po.otherFees === 0 ? '' : (typeof po.otherFees === 'number' ? po.otherFees.toFixed(2) : po.otherFees),
+                  tax: po.tax === 0 ? '' : (typeof po.tax === 'number' ? po.tax.toFixed(2) : po.tax),
                   status: po.status,
                 }); }}
               >Cancel
