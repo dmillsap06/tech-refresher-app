@@ -8,7 +8,8 @@ import ArchivedInventory from './components/ArchivedInventory';
 import OrdersPage from './components/orders/OrdersPage';
 import ErrorLog from './components/ErrorLog';
 import Notification from './components/Notification';
-import SplashScreen from './components/SplashScreen'; // Add this file!
+import SplashScreen from './components/SplashScreen';
+import PurchaseOrdersPage from './components/purchaseOrders/PurchaseOrdersPage'; // <-- NEW IMPORT
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -100,6 +101,8 @@ function App() {
         return <ArchivedInventory {...pageProps} />;
       case 'orders':
         return <OrdersPage {...pageProps} />;
+      case 'purchaseorders':
+        return <PurchaseOrdersPage {...pageProps} />; // <-- NEW CASE
       case 'errorlog':
         return isSuperAdmin ? <ErrorLog {...pageProps} /> : <Dashboard userProfile={userProfile} onLogout={handleLogout} onNavigate={navigate} isSuperAdmin={isSuperAdmin} />;
       case 'dashboard':
