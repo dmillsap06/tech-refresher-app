@@ -45,42 +45,68 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const [tax, setTax] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Catalogs
+  // Catalogs and error tracking
   const [catalogs, setCatalogs] = useState({
     Part: [],
     Accessory: [],
     Device: [],
     Game: []
   });
+  const [catalogErrors, setCatalogErrors] = useState({});
+
   // For per-line search
   const [searchTerms, setSearchTerms] = useState({});
 
   // Modal state for "Add New"
   const [showCreateModal, setShowCreateModal] = useState({ open: false, category: null, lineIdx: null });
 
-  // Fetch all catalogs on mount and after add-new
-  const fetchCatalogs = async () => {
+  // Resilient catalog fetch
+  const fetchCatalog = async (col, groupId) => {
     try {
-      const [partSnap, accessorySnap, deviceSnap, gameSnap] = await Promise.all([
-        getDocs(query(collection(db, 'parts'), where('groupId', '==', userProfile.groupId))),
-        getDocs(query(collection(db, 'accessories'), where('groupId', '==', userProfile.groupId))),
-        getDocs(query(collection(db, 'devices'), where('groupId', '==', userProfile.groupId))),
-        getDocs(query(collection(db, 'games'), where('groupId', '==', userProfile.groupId))),
-      ]);
-      setCatalogs({
-        Part: partSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
-        Accessory: accessorySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
-        Device: deviceSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
-        Game: gameSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
-      });
+      const snap = await getDocs(query(collection(db, col), where('groupId', '==', groupId)));
+      return { data: snap.docs.map(doc => ({ id: doc.id, ...doc.data() })), error: null };
     } catch (err) {
-      logError('PurchaseOrderForm-LoadCatalogs', err);
-      showNotification('Failed to load catalogs: ' + err.message, 'error');
+      logError(`PurchaseOrderForm-LoadCatalogs-${col}`, err);
+      return { data: [], error: err.message || "Unknown error" };
+    }
+  };
+
+  // Fetch catalogs individually for resiliency
+  const fetchCatalogsResilient = async () => {
+    setCatalogErrors({});
+    if (!userProfile?.groupId) return;
+
+    const catDefs = [
+      { key: "Part", col: "parts" },
+      { key: "Accessory", col: "accessories" },
+      { key: "Device", col: "devices" },
+      { key: "Game", col: "games" }
+    ];
+
+    const results = await Promise.all(
+      catDefs.map(({ key, col }) => fetchCatalog(col, userProfile.groupId).then(res => ({ key, ...res })))
+    );
+
+    const newCatalogs = {};
+    const newErrors = {};
+    results.forEach(({ key, data, error }) => {
+      newCatalogs[key] = data;
+      if (error) newErrors[key] = error;
+    });
+
+    setCatalogs(newCatalogs);
+    setCatalogErrors(newErrors);
+    // Optionally notify user if some failed
+    if (Object.keys(newErrors).length > 0) {
+      showNotification(
+        "Some catalogs failed to load: " + Object.entries(newErrors).map(([k, v]) => `${k}: ${v}`).join("; "),
+        "warning"
+      );
     }
   };
 
   useEffect(() => {
-    fetchCatalogs();
+    fetchCatalogsResilient();
     // eslint-disable-next-line
   }, []);
 
@@ -284,6 +310,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                   const category = item.category;
                   const searchTerm = searchTerms[idx] || '';
                   const filteredCatalog = getFilteredCatalog(category, searchTerm);
+                  const hasCatalogError = !!catalogErrors[category];
 
                   return (
                     <tr key={idx}>
@@ -321,31 +348,37 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                       </td>
                       <td>
                         <div className="flex flex-col gap-1">
-                          <input
-                            type="text"
-                            className={inputClass + " mb-1"}
-                            placeholder={`Search ${categoryDisplayMap[category]}...`}
-                            value={searchTerm}
-                            onChange={e => handleSearchChange(idx, e.target.value)}
-                          />
-                          <select
-                            className={inputClass}
-                            value={item.linkedId || ''}
-                            onChange={e => handleLinkSelect(idx, e.target.value)}
-                            required
-                          >
-                            <option value="" disabled>
-                              {filteredCatalog.length === 0 && searchTerm
-                                ? "No matches"
-                                : `Select ${categoryDisplayMap[category]}...`}
-                            </option>
-                            {filteredCatalog.map(catItem => (
-                              <option key={catItem.id} value={catItem.id}>
-                                {catItem.name}
-                              </option>
-                            ))}
-                            <option value="_create_new">+ Add New {categoryDisplayMap[category]}...</option>
-                          </select>
+                          {hasCatalogError ? (
+                            <div className="text-red-500 text-sm py-2">Failed to load {category} catalog.</div>
+                          ) : (
+                            <>
+                              <input
+                                type="text"
+                                className={inputClass + " mb-1"}
+                                placeholder={`Search ${categoryDisplayMap[category]}...`}
+                                value={searchTerm}
+                                onChange={e => handleSearchChange(idx, e.target.value)}
+                              />
+                              <select
+                                className={inputClass}
+                                value={item.linkedId || ''}
+                                onChange={e => handleLinkSelect(idx, e.target.value)}
+                                required
+                              >
+                                <option value="" disabled>
+                                  {filteredCatalog.length === 0 && searchTerm
+                                    ? "No matches"
+                                    : `Select ${categoryDisplayMap[category]}...`}
+                                </option>
+                                {filteredCatalog.map(catItem => (
+                                  <option key={catItem.id} value={catItem.id}>
+                                    {catItem.name}
+                                  </option>
+                                ))}
+                                <option value="_create_new">+ Add New {categoryDisplayMap[category]}...</option>
+                              </select>
+                            </>
+                          )}
                         </div>
                       </td>
                       <td>
