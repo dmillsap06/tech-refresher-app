@@ -11,6 +11,14 @@ const inputClass =
 const dollarInputWrapper = "relative";
 const dollarPrefix = "absolute left-2 inset-y-0 flex items-center text-gray-400 pointer-events-none";
 
+// Fun status info
+const statusInfo = {
+  "Created":   { color: "bg-blue-100 text-blue-700", emoji: "📝", label: "Created" },
+  "Partially Received": { color: "bg-yellow-100 text-yellow-800", emoji: "📦", label: "Partial" },
+  "Received":  { color: "bg-green-100 text-green-700", emoji: "✅", label: "Received" },
+  "Cancelled": { color: "bg-gray-200 text-gray-500", emoji: "❌", label: "Cancelled" },
+};
+
 function formatMoney(val) {
   if (val === '' || isNaN(val)) return '';
   return Number(val).toFixed(2);
@@ -57,14 +65,11 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
         setInventory(invSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         const partSnap = await getDocs(collection(db, 'parts'));
         setParts(partSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (err) {
-        // fallback: do nothing
-      }
+      } catch (err) {}
     };
     fetchItems();
   }, [showCreateInventory, showCreatePart]);
 
-  // Prevent endless error logging/notifications
   const errorReported = useRef(false);
 
   const canEdit = formState.status === 'Created' && userProfile.groupId === po.groupId;
@@ -184,8 +189,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
 
   const saveEdits = async () => {
     setSaving(true);
-    errorReported.current = false; // Reset on new attempt
-    // Validate all line items are linked
+    errorReported.current = false;
     for (const li of formState.lineItems) {
       if (li.category === 'Inventory' && !li.inventoryId) {
         showNotification('All inventory line items must be linked to an inventory item.', 'error');
@@ -231,10 +235,8 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     }
   };
 
-  // Render status history if present
   const statusHistory = po.statusHistory || [];
 
-  // Helper: get linked display name
   const getLinkedDisplay = (item) => {
     if (item.category === 'Inventory' && item.inventoryId) {
       const inv = inventory.find(inv => inv.id === item.inventoryId);
@@ -247,13 +249,27 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     return '';
   };
 
+  // Status badge (fun style)
+  const badge = (() => {
+    const { color, emoji, label } = statusInfo[formState.status] || { color: "bg-gray-200 text-gray-600", emoji: "❓", label: formState.status };
+    return (
+      <span className={`inline-flex items-center rounded-full px-3 py-1 ml-3 text-base font-semibold ${color} border border-gray-200 shadow-sm`}>
+        <span className="mr-1 text-lg">{emoji}</span>
+        {label}
+      </span>
+    );
+  })();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-4xl relative">
         <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
-        <h2 className="text-xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">
-          Purchase Order Details
-        </h2>
+        <div className="flex items-center mb-4">
+          <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
+            Purchase Order Details
+          </h2>
+          {badge}
+        </div>
         <div className="mb-3 flex gap-4">
           <div className="flex-1">
             <label className="block font-medium mb-1">Vendor</label>
@@ -294,20 +310,20 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
           <table className="min-w-full border rounded mb-2">
             <thead>
               <tr>
-                <th className="px-2 py-1">Description</th>
+                <th className="px-2 py-1 text-left">Description</th>
                 <th className="px-2 py-1 text-center">Qty Ordered</th>
                 <th className="px-2 py-1 text-center">Qty Received</th>
-                <th className="px-2 py-1">Unit Price</th>
-                <th className="px-2 py-1">Category</th>
-                <th className="px-2 py-1">Inventory/Part Link</th>
-                <th className="px-2 py-1">Notes</th>
+                <th className="px-2 py-1 text-center">Unit Price</th>
+                <th className="px-2 py-1 text-center">Category</th>
+                <th className="px-2 py-1 text-center">Inventory/Part Link</th>
+                <th className="px-2 py-1 text-left">Notes</th>
                 {editMode && <th />}
               </tr>
             </thead>
             <tbody>
               {formState.lineItems.map((item, idx) => (
                 <tr key={idx}>
-                  <td>
+                  <td className="text-left">
                     {editMode ? (
                       <input type="text" className={inputClass} value={item.description}
                         onChange={e => handleLineChange(idx, 'description', e.target.value)} required />
@@ -326,7 +342,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                       ? item.quantityReceived
                       : 0}
                   </td>
-                  <td>
+                  <td className="text-center">
                     {editMode ? (
                       <div className={dollarInputWrapper}>
                         <span className={dollarPrefix}>$</span>
@@ -348,7 +364,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                       `$${formatMoney(item.unitPrice)}`
                     )}
                   </td>
-                  <td>
+                  <td className="text-center">
                     {editMode ? (
                       <select className={inputClass} value={item.category} onChange={e => handleLineCategoryChange(idx, e.target.value)}>
                         <option value="Inventory">Inventory</option>
@@ -356,7 +372,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                       </select>
                     ) : item.category}
                   </td>
-                  <td>
+                  <td className="text-center">
                     {editMode ? (
                       item.category === 'Inventory' ? (
                         <div className="flex items-center gap-1">
@@ -395,7 +411,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                       <span className="text-sm">{getLinkedDisplay(item) || <span className="text-red-500">Not linked</span>}</span>
                     )}
                   </td>
-                  <td>
+                  <td className="text-left">
                     {editMode ? (
                       <input type="text" className={inputClass} value={item.notes}
                         onChange={e => handleLineChange(idx, 'notes', e.target.value)} />
@@ -494,11 +510,6 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
             <label className="block text-xs text-gray-500">Total</label>
             <div className="font-bold">${formatMoney(total)}</div>
           </div>
-        </div>
-        {/* Status */}
-        <div className="mb-3">
-          <label className="block font-medium mb-1">Status</label>
-          <div>{formState.status}</div>
         </div>
         {/* Status History */}
         <div className="mb-6">
