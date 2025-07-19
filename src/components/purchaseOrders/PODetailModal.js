@@ -11,7 +11,6 @@ const inputClass =
 const dollarInputWrapper = "relative";
 const dollarPrefix = "absolute left-2 inset-y-0 flex items-center text-gray-400 pointer-events-none";
 
-// Fun status info
 const statusInfo = {
   "Created":   { color: "bg-blue-100 text-blue-700", emoji: "📝", label: "Created" },
   "Partially Received": { color: "bg-yellow-100 text-yellow-800", emoji: "📦", label: "Partial" },
@@ -25,22 +24,24 @@ function formatMoney(val) {
   return `$${n.toFixed(2)}`;
 }
 
-// Friendly date: January 1st, 2025
 function formatFriendlyDate(dt) {
   if (!dt) return '-';
   let d;
   if (typeof dt === 'string') d = new Date(dt);
   else if (dt.toDate) d = dt.toDate();
   else d = dt;
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  // Format: January 1st, 2025
+  const day = d.getDate();
+  const daySuffix =
+    day % 10 === 1 && day !== 11 ? 'st' :
+    day % 10 === 2 && day !== 12 ? 'nd' :
+    day % 10 === 3 && day !== 13 ? 'rd' : 'th';
+  return `${d.toLocaleString('en-US', { month: 'long' })} ${day}${daySuffix}, ${d.getFullYear()}`;
 }
 
 const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const [editMode, setEditMode] = useState(false);
+
   const [formState, setFormState] = useState(() => ({
     vendor: po.vendor,
     vendorOrderNumber: po.vendorOrderNumber || '',
@@ -58,19 +59,16 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const [saving, setSaving] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
 
-  // Catalogs for all categories
   const [parts, setParts] = useState([]);
   const [accessories, setAccessories] = useState([]);
   const [devices, setDevices] = useState([]);
   const [games, setGames] = useState([]);
 
-  // For legacy create modals (can be removed if not used)
   const [showCreateInventory, setShowCreateInventory] = useState(false);
   const [showCreatePart, setShowCreatePart] = useState(false);
   const [pendingLineIndex, setPendingLineIndex] = useState(null);
 
   useEffect(() => {
-    // Load all catalogs for linking
     const fetchCatalogs = async () => {
       try {
         const [partSnap, accSnap, devSnap, gameSnap] = await Promise.all([
@@ -98,7 +96,8 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   );
   const total = subtotal + Number(formState.tax || 0) + Number(formState.shippingCost || 0) + Number(formState.otherFees || 0);
 
-  // ----------- REQUIRED HANDLERS -----------
+  // ---- HANDLER FUNCTIONS ----
+
   const handleLineChange = (index, field, value) => {
     setFormState(state => ({
       ...state,
@@ -179,7 +178,6 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     }
   };
 
-  // Catalog lookup for display
   const getLinkedDisplay = (item) => {
     if (!item.linkedId) return null;
     switch (item.category) {
@@ -201,14 +199,12 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     }
   };
 
-  // For POReceiveModal and CreateInventoryModal and CreatePartModal
   const handleCreatedInventory = (newInv) => {
     setShowCreateInventory(false);
     if (pendingLineIndex !== null) {
       handleLineChange(pendingLineIndex, 'linkedId', newInv.id);
       setPendingLineIndex(null);
     }
-    // Add to local state if needed
   };
   const handleCreatedPart = (newPart) => {
     setShowCreatePart(false);
@@ -219,7 +215,6 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     setParts(parts => [...parts, newPart]);
   };
 
-  // Status history
   const statusHistory = po.statusHistory || [];
 
   const badge = (() => {
@@ -232,7 +227,6 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     );
   })();
 
-  // --- Begin render ---
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-7xl relative flex flex-col h-[98vh]">
@@ -508,20 +502,23 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
               <button
                 type="button"
                 className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
-                onClick={() => { setEditMode(false); setFormState({
-                  vendor: po.vendor,
-                  vendorOrderNumber: po.vendorOrderNumber || '',
-                  date: po.date?.toDate?.().toISOString().substr(0, 10) || '',
-                  notes: po.notes || '',
-                  lineItems: po.lineItems?.map(li => ({
-                    ...li,
-                    unitPrice: (typeof li.unitPrice === 'number' && li.unitPrice === 0) ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice)
-                  })) || [],
-                  shippingCost: (typeof po.shippingCost === 'number' && po.shippingCost === 0) ? '' : (typeof po.shippingCost === 'number' ? po.shippingCost.toFixed(2) : po.shippingCost),
-                  otherFees: (typeof po.otherFees === 'number' && po.otherFees === 0) ? '' : (typeof po.otherFees === 'number' ? po.otherFees.toFixed(2) : po.otherFees),
-                  tax: (typeof po.tax === 'number' && po.tax === 0) ? '' : (typeof po.tax === 'number' ? po.tax.toFixed(2) : po.tax),
-                  status: po.status,
-                }); }}
+                onClick={() => {
+                  setEditMode(false);
+                  setFormState({
+                    vendor: po.vendor,
+                    vendorOrderNumber: po.vendorOrderNumber || '',
+                    date: po.date?.toDate?.().toISOString().substr(0, 10) || '',
+                    notes: po.notes || '',
+                    lineItems: po.lineItems?.map(li => ({
+                      ...li,
+                      unitPrice: (typeof li.unitPrice === 'number' && li.unitPrice === 0) ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice)
+                    })) || [],
+                    shippingCost: (typeof po.shippingCost === 'number' && po.shippingCost === 0) ? '' : (typeof po.shippingCost === 'number' ? po.shippingCost.toFixed(2) : po.shippingCost),
+                    otherFees: (typeof po.otherFees === 'number' && po.otherFees === 0) ? '' : (typeof po.otherFees === 'number' ? po.otherFees.toFixed(2) : po.otherFees),
+                    tax: (typeof po.tax === 'number' && po.tax === 0) ? '' : (typeof po.tax === 'number' ? po.tax.toFixed(2) : po.tax),
+                    status: po.status,
+                  });
+                }}
               >Cancel
               </button>
               <button
