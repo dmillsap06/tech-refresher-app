@@ -511,15 +511,15 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="w-full max-w-7xl">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 relative flex flex-col max-h-[90vh] overflow-y-auto">
-          <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
-          <div className="flex items-center mb-4">
-            <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
-              Purchase Order Details
-            </h2>
-            {badge}
-          </div>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-7xl relative flex flex-col h-[98vh]">
+        <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+        <div className="flex items-center mb-4">
+          <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
+            Purchase Order Details
+          </h2>
+          {badge}
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: '75vh' }}>
           {/* PO fields */}
           <div className="mb-6">
             <label className="block font-medium mb-1">Vendor</label>
@@ -666,111 +666,110 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
               </button>
             )}
           </div>
-          {/* Buttons */}
-          <div className="flex justify-end gap-3 mt-5">
-            {canReceive && (
+        </div>
+        <div className="flex justify-end gap-3 mt-5">
+          {canReceive && (
+            <button
+              type="button"
+              className="px-5 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700"
+              onClick={() => setShowReceiveModal(true)}
+            >Receive
+            </button>
+          )}
+          {editMode ? (
+            <>
               <button
                 type="button"
-                className="px-5 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700"
-                onClick={() => setShowReceiveModal(true)}
-              >Receive
+                className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
+                onClick={() => {
+                  setEditMode(false);
+                  setFormState({
+                    vendor: po.vendor,
+                    vendorOrderNumber: po.vendorOrderNumber || '',
+                    date: po.date?.toDate?.().toISOString().substr(0, 10) || '',
+                    notes: po.notes || '',
+                    lineItems: po.lineItems?.map((li, idx) => ({
+                      ...li,
+                      unitPrice: (typeof li.unitPrice === 'number' && li.unitPrice === 0) ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice),
+                      index: idx,
+                    })) || [],
+                    shippingCost: (typeof po.shippingCost === 'number' && po.shippingCost === 0) ? '' : (typeof po.shippingCost === 'number' ? po.shippingCost.toFixed(2) : po.shippingCost),
+                    otherFees: (typeof po.otherFees === 'number' && po.otherFees === 0) ? '' : (typeof po.otherFees === 'number' ? po.otherFees.toFixed(2) : po.otherFees),
+                    tax: (typeof po.tax === 'number' && po.tax === 0) ? '' : (typeof po.tax === 'number' ? po.tax.toFixed(2) : po.tax),
+                    status: po.status,
+                  });
+                }}
+              >Cancel
               </button>
-            )}
-            {editMode ? (
-              <>
-                <button
-                  type="button"
-                  className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
-                  onClick={() => {
-                    setEditMode(false);
-                    setFormState({
-                      vendor: po.vendor,
-                      vendorOrderNumber: po.vendorOrderNumber || '',
-                      date: po.date?.toDate?.().toISOString().substr(0, 10) || '',
-                      notes: po.notes || '',
-                      lineItems: po.lineItems?.map((li, idx) => ({
-                        ...li,
-                        unitPrice: (typeof li.unitPrice === 'number' && li.unitPrice === 0) ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice),
-                        index: idx,
-                      })) || [],
-                      shippingCost: (typeof po.shippingCost === 'number' && po.shippingCost === 0) ? '' : (typeof po.shippingCost === 'number' ? po.shippingCost.toFixed(2) : po.shippingCost),
-                      otherFees: (typeof po.otherFees === 'number' && po.otherFees === 0) ? '' : (typeof po.otherFees === 'number' ? po.otherFees.toFixed(2) : po.otherFees),
-                      tax: (typeof po.tax === 'number' && po.tax === 0) ? '' : (typeof po.tax === 'number' ? po.tax.toFixed(2) : po.tax),
-                      status: po.status,
-                    });
-                  }}
-                >Cancel
-                </button>
-                <button
-                  type="button"
-                  className="px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700"
-                  disabled={saving}
-                  onClick={saveEdits}
-                >{saving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </>
-            ) : canEdit && (
               <button
                 type="button"
                 className="px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700"
-                onClick={() => setEditMode(true)}
-              >Edit
+                disabled={saving}
+                onClick={saveEdits}
+              >{saving ? 'Saving...' : 'Save Changes'}
               </button>
-            )}
+            </>
+          ) : canEdit && (
             <button
               type="button"
-              className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
-              onClick={onClose}
-            >Close
+              className="px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700"
+              onClick={() => setEditMode(true)}
+            >Edit
             </button>
-          </div>
-          {showReceiveModal && (
-            <POReceiveModal
-              po={po}
-              userProfile={userProfile}
-              showNotification={showNotification}
-              onClose={() => setShowReceiveModal(false)}
-            />
           )}
-          {showCreateInventory && (
-            <CreateInventoryModal
-              userProfile={userProfile}
-              onCreated={handleCreatedInventory}
-              onClose={() => setShowCreateInventory(false)}
-              showNotification={showNotification}
-            />
-          )}
-          {showCreatePart && (
-            <CreatePartModal
-              userProfile={userProfile}
-              onCreated={handleCreatedPart}
-              onClose={() => setShowCreatePart(false)}
-              showNotification={showNotification}
-            />
-          )}
-          {showMarkPaid && (
-            <MarkAsPaidModal
-              open={showMarkPaid}
-              onClose={() => setShowMarkPaid(false)}
-              onSave={handleMarkPaid}
-              defaultAmount={total}
-              defaultDate={new Date().toISOString().slice(0, 10)}
-              loading={savingPayment}
-              groupId={userProfile.groupId}
-              paymentMethods={paymentMethods}
-            />
-          )}
-          {showMarkShipped && (
-            <MarkAsShippedModal
-              open={showMarkShipped}
-              onClose={() => setShowMarkShipped(false)}
-              onSave={handleMarkShipped}
-              lineItems={formState.lineItems}
-              defaultDate={new Date().toISOString().slice(0, 10)}
-              loading={savingShipment}
-            />
-          )}
+          <button
+            type="button"
+            className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
+            onClick={onClose}
+          >Close
+          </button>
         </div>
+        {showReceiveModal && (
+          <POReceiveModal
+            po={po}
+            userProfile={userProfile}
+            showNotification={showNotification}
+            onClose={() => setShowReceiveModal(false)}
+          />
+        )}
+        {showCreateInventory && (
+          <CreateInventoryModal
+            userProfile={userProfile}
+            onCreated={handleCreatedInventory}
+            onClose={() => setShowCreateInventory(false)}
+            showNotification={showNotification}
+          />
+        )}
+        {showCreatePart && (
+          <CreatePartModal
+            userProfile={userProfile}
+            onCreated={handleCreatedPart}
+            onClose={() => setShowCreatePart(false)}
+            showNotification={showNotification}
+          />
+        )}
+        {showMarkPaid && (
+          <MarkAsPaidModal
+            open={showMarkPaid}
+            onClose={() => setShowMarkPaid(false)}
+            onSave={handleMarkPaid}
+            defaultAmount={total}
+            defaultDate={new Date().toISOString().slice(0, 10)}
+            loading={savingPayment}
+            groupId={userProfile.groupId}
+            paymentMethods={paymentMethods}
+          />
+        )}
+        {showMarkShipped && (
+          <MarkAsShippedModal
+            open={showMarkShipped}
+            onClose={() => setShowMarkShipped(false)}
+            onSave={handleMarkShipped}
+            lineItems={formState.lineItems}
+            defaultDate={new Date().toISOString().slice(0, 10)}
+            loading={savingShipment}
+          />
+        )}
       </div>
     </div>
   );
