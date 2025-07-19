@@ -31,6 +31,13 @@ function formatDate(dt) {
   return dt.toLocaleString();
 }
 
+const CATALOGS = [
+  { key: "Part", stateKey: "parts", collection: "parts" },
+  { key: "Accessory", stateKey: "accessories", collection: "accessories" },
+  { key: "Device", stateKey: "devices", collection: "deviceTypes" },
+  { key: "Game", stateKey: "games", collection: "games" }
+];
+
 const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const [editMode, setEditMode] = useState(false);
   const [formState, setFormState] = useState(() => ({
@@ -50,24 +57,34 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const [saving, setSaving] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
 
-  // Inventory/Parts
-  const [inventory, setInventory] = useState([]);
+  // Catalogs for all categories
   const [parts, setParts] = useState([]);
+  const [accessories, setAccessories] = useState([]);
+  const [devices, setDevices] = useState([]);
+  const [games, setGames] = useState([]);
+
+  // Modals for inventory/part creation (legacy, can be removed if not used)
   const [showCreateInventory, setShowCreateInventory] = useState(false);
   const [showCreatePart, setShowCreatePart] = useState(false);
   const [pendingLineIndex, setPendingLineIndex] = useState(null);
 
   useEffect(() => {
-    // Load inventory and parts for linking
-    const fetchItems = async () => {
+    // Load all catalogs for linking
+    const fetchCatalogs = async () => {
       try {
-        const invSnap = await getDocs(collection(db, 'inventory'));
-        setInventory(invSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        const partSnap = await getDocs(collection(db, 'parts'));
+        const [partSnap, accSnap, devSnap, gameSnap] = await Promise.all([
+          getDocs(collection(db, 'parts')),
+          getDocs(collection(db, 'accessories')),
+          getDocs(collection(db, 'deviceTypes')),
+          getDocs(collection(db, 'games'))
+        ]);
         setParts(partSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setAccessories(accSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setDevices(devSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setGames(gameSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       } catch (err) {}
     };
-    fetchItems();
+    fetchCatalogs();
   }, [showCreateInventory, showCreatePart]);
 
   const errorReported = useRef(false);
@@ -94,7 +111,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
       ...state,
       lineItems: state.lineItems.map((item, i) =>
         i === index
-          ? { ...item, category: value, inventoryId: '', partId: '' }
+          ? { ...item, category: value, linkedId: '' }
           : item
       )
     }));
@@ -105,7 +122,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
       ...state,
       lineItems: [
         ...state.lineItems,
-        { description: '', quantity: 1, unitPrice: '', category: 'Inventory', notes: '', inventoryId: '', partId: '', quantityReceived: 0 }
+        { description: '', quantity: 1, unitPrice: '', category: 'Part', notes: '', linkedId: '', quantityReceived: 0 }
       ]
     }));
   };
@@ -149,34 +166,34 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     setFormState(state => ({ ...state, [field]: e.target.value }));
   };
 
+  // Editing: handle select of linked catalog item for all categories
   const handleLinkSelect = (idx, value) => {
     setFormState(state => ({
       ...state,
       lineItems: state.lineItems.map((item, i) =>
         i === idx
-          ? item.category === 'Inventory'
-            ? { ...item, inventoryId: value, partId: '' }
-            : { ...item, partId: value, inventoryId: '' }
+          ? { ...item, linkedId: value }
           : item
       )
     }));
   };
 
+  // To support legacy inventory/part creation modals (optional)
   const handleCreateNew = (idx) => {
     const cat = formState.lineItems[idx].category;
     setPendingLineIndex(idx);
     if (cat === 'Inventory') setShowCreateInventory(true);
-    else setShowCreatePart(true);
+    else if (cat === 'Part') setShowCreatePart(true);
+    // Could be extended for other categories
   };
 
-  // After creating a new inv/part, auto-link it to the pending line
   const handleCreatedInventory = (newInv) => {
     setShowCreateInventory(false);
     if (pendingLineIndex !== null) {
       handleLinkSelect(pendingLineIndex, newInv.id);
       setPendingLineIndex(null);
     }
-    setInventory(inv => [...inv, newInv]);
+    // Add to local state if needed
   };
   const handleCreatedPart = (newPart) => {
     setShowCreatePart(false);
@@ -191,13 +208,9 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     setSaving(true);
     errorReported.current = false;
     for (const li of formState.lineItems) {
-      if (li.category === 'Inventory' && !li.inventoryId) {
-        showNotification('All inventory line items must be linked to an inventory item.', 'error');
-        setSaving(false);
-        return;
-      }
-      if (li.category === 'Part' && !li.partId) {
-        showNotification('All part line items must be linked to a part.', 'error');
+      // All line items must be linked
+      if (!li.linkedId) {
+        showNotification('All line items must be linked to a catalog item.', 'error');
         setSaving(false);
         return;
       }
@@ -237,16 +250,44 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
 
   const statusHistory = po.statusHistory || [];
 
+  // Catalog lookup for display
   const getLinkedDisplay = (item) => {
-    if (item.category === 'Inventory' && item.inventoryId) {
-      const inv = inventory.find(inv => inv.id === item.inventoryId);
-      return inv ? (inv.name || inv.id) : item.inventoryId;
+    if (!item.linkedId) return null;
+    switch (item.category) {
+      case 'Part':
+        {
+          const found = parts.find(x => x.id === item.linkedId);
+          return found ? (found.name || found.id) : item.linkedId;
+        }
+      case 'Accessory':
+        {
+          const found = accessories.find(x => x.id === item.linkedId);
+          return found ? (found.name || found.id) : item.linkedId;
+        }
+      case 'Device':
+        {
+          const found = devices.find(x => x.id === item.linkedId);
+          return found ? (found.name || found.id) : item.linkedId;
+        }
+      case 'Game':
+        {
+          const found = games.find(x => x.id === item.linkedId);
+          return found ? (found.name || found.id) : item.linkedId;
+        }
+      default:
+        return item.linkedId;
     }
-    if (item.category === 'Part' && item.partId) {
-      const part = parts.find(part => part.id === item.partId);
-      return part ? (part.name || part.id) : item.partId;
+  };
+
+  // For editing, get catalog list for current category
+  const getCatalogList = (category) => {
+    switch (category) {
+      case 'Part': return parts;
+      case 'Accessory': return accessories;
+      case 'Device': return devices;
+      case 'Game': return games;
+      default: return [];
     }
-    return '';
   };
 
   // Status badge (fun style)
@@ -315,7 +356,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                 <th className="px-2 py-1 text-center">Qty Received</th>
                 <th className="px-2 py-1 text-center">Unit Price</th>
                 <th className="px-2 py-1 text-center">Category</th>
-                <th className="px-2 py-1 text-center">Inventory/Part Link</th>
+                <th className="px-2 py-1 text-center">Catalog Link</th>
                 <th className="px-2 py-1 text-left">Notes</th>
                 {editMode && <th />}
               </tr>
@@ -367,48 +408,43 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                   <td className="text-center">
                     {editMode ? (
                       <select className={inputClass} value={item.category} onChange={e => handleLineCategoryChange(idx, e.target.value)}>
-                        <option value="Inventory">Inventory</option>
                         <option value="Part">Part</option>
+                        <option value="Accessory">Accessory</option>
+                        <option value="Device">Device</option>
+                        <option value="Game">Game</option>
                       </select>
                     ) : item.category}
                   </td>
                   <td className="text-center">
                     {editMode ? (
-                      item.category === 'Inventory' ? (
-                        <div className="flex items-center gap-1">
-                          <select
-                            className={inputClass}
-                            value={item.inventoryId || ''}
-                            onChange={e => handleLinkSelect(idx, e.target.value)}
-                            required
-                          >
-                            <option value="" disabled>Select Inventory...</option>
-                            {inventory.map(inv => (
-                              <option key={inv.id} value={inv.id}>{inv.name || inv.id}</option>
-                            ))}
-                            <option value="_create_new">+ Create New...</option>
-                          </select>
-                          {item.inventoryId === '_create_new' && handleCreateNew(idx)}
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <select
-                            className={inputClass}
-                            value={item.partId || ''}
-                            onChange={e => handleLinkSelect(idx, e.target.value)}
-                            required
-                          >
-                            <option value="" disabled>Select Part...</option>
-                            {parts.map(part => (
-                              <option key={part.id} value={part.id}>{part.name || part.id}</option>
-                            ))}
-                            <option value="_create_new">+ Create New...</option>
-                          </select>
-                          {item.partId === '_create_new' && handleCreateNew(idx)}
-                        </div>
-                      )
+                      <div className="flex items-center gap-1">
+                        <select
+                          className={inputClass}
+                          value={item.linkedId || ''}
+                          onChange={e => handleLinkSelect(idx, e.target.value)}
+                          required
+                        >
+                          <option value="" disabled>
+                            {item.category === 'Part' && 'Select Part...'}
+                            {item.category === 'Accessory' && 'Select Accessory...'}
+                            {item.category === 'Device' && 'Select Device...'}
+                            {item.category === 'Game' && 'Select Game...'}
+                          </option>
+                          {getCatalogList(item.category).map(catItem => (
+                            <option key={catItem.id} value={catItem.id}>{catItem.name || catItem.id}</option>
+                          ))}
+                          {/* Optionally allow "create new" for categories */}
+                          {/* <option value="_create_new">+ Create New...</option>
+                              {item.linkedId === '_create_new' && handleCreateNew(idx)} */}
+                        </select>
+                      </div>
                     ) : (
-                      <span className="text-sm">{getLinkedDisplay(item) || <span className="text-red-500">Not linked</span>}</span>
+                      <span className="text-sm">
+                        {item.linkedId
+                          ? getLinkedDisplay(item) || <span className="text-red-500">Not linked</span>
+                          : <span className="text-red-500">Not linked</span>
+                        }
+                      </span>
                     )}
                   </td>
                   <td className="text-left">
