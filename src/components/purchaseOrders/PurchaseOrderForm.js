@@ -1,9 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, Timestamp } from 'firebase/firestore';
 import logError from '../../utils/logError';
+import CreateInventoryModal from './CreateInventoryModal';
+import CreatePartModal from './CreatePartModal';
 
-const defaultLineItem = { description: '', quantity: 1, unitPrice: '', category: 'Inventory', notes: '' };
+const defaultLineItem = { description: '', quantity: 1, unitPrice: '', category: 'Inventory', notes: '', inventoryId: '', partId: '' };
 
 const inputClass =
   "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
@@ -27,11 +29,47 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const [tax, setTax] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Prevent endless error logging/notifications
-  const errorReported = useRef(false);
+  // Inventory/Parts
+  const [inventory, setInventory] = useState([]);
+  const [parts, setParts] = useState([]);
+  const [showCreateInventory, setShowCreateInventory] = useState(false);
+  const [showCreatePart, setShowCreatePart] = useState(false);
+  const [pendingLineIndex, setPendingLineIndex] = useState(null);
+
+  useEffect(() => {
+    // Load inventory and parts for linking
+    const fetchItems = async () => {
+      try {
+        const invSnap = await getDocs(collection(db, 'inventory'));
+        setInventory(invSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const partSnap = await getDocs(collection(db, 'parts'));
+        setParts(partSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        logError('PurchaseOrderForm-LoadInventoryParts', err);
+        showNotification('Failed to load inventory/parts: ' + err.message, 'error');
+      }
+    };
+    fetchItems();
+  }, [showCreateInventory, showCreatePart]); // reload after new created
 
   const handleLineChange = (index, field, value) => {
     setLineItems(items => items.map((item, i) => i === index ? { ...item, [field]: value } : item));
+  };
+
+  const handleLineCategoryChange = (index, value) => {
+    // Reset link fields when switching category
+    setLineItems(items =>
+      items.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              category: value,
+              inventoryId: '',
+              partId: ''
+            }
+          : item
+      )
+    );
   };
 
   const handleAddLine = () => setLineItems(items => [...items, { ...defaultLineItem }]);
@@ -42,6 +80,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   );
   const total = subtotal + Number(tax || 0) + Number(shippingCost || 0) + Number(otherFees || 0);
 
+  // For dollar fields: allow only numbers and one dot, but keep as string for easier typing
   const handleDollarChange = setter => e => {
     let val = e.target.value.replace(/[^0-9.]/g, '');
     if ((val.match(/\./g) || []).length > 1) return;
@@ -72,10 +111,59 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     handleLineChange(index, field, Number(val).toFixed(2));
   };
 
+  const handleLinkSelect = (idx, value) => {
+    setLineItems(items =>
+      items.map((item, i) =>
+        i === idx
+          ? item.category === 'Inventory'
+            ? { ...item, inventoryId: value, partId: '' }
+            : { ...item, partId: value, inventoryId: '' }
+          : item
+      )
+    );
+  };
+
+  const handleCreateNew = (idx) => {
+    const cat = lineItems[idx].category;
+    setPendingLineIndex(idx);
+    if (cat === 'Inventory') setShowCreateInventory(true);
+    else setShowCreatePart(true);
+  };
+
+  // After creating a new inv/part, auto-link it to the pending line
+  const handleCreatedInventory = (newInv) => {
+    setShowCreateInventory(false);
+    if (pendingLineIndex !== null) {
+      handleLinkSelect(pendingLineIndex, newInv.id);
+      setPendingLineIndex(null);
+    }
+    setInventory(inv => [...inv, newInv]);
+  };
+  const handleCreatedPart = (newPart) => {
+    setShowCreatePart(false);
+    if (pendingLineIndex !== null) {
+      handleLinkSelect(pendingLineIndex, newPart.id);
+      setPendingLineIndex(null);
+    }
+    setParts(parts => [...parts, newPart]);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    errorReported.current = false; // Reset on new attempt
+    // Validate all line items are linked
+    for (const li of lineItems) {
+      if (li.category === 'Inventory' && !li.inventoryId) {
+        showNotification('All inventory line items must be linked to an inventory item.', 'error');
+        setIsSaving(false);
+        return;
+      }
+      if (li.category === 'Part' && !li.partId) {
+        showNotification('All part line items must be linked to a part.', 'error');
+        setIsSaving(false);
+        return;
+      }
+    }
     try {
       const poData = {
         poNumber: '',
@@ -88,7 +176,8 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
         lineItems: lineItems.map(li => ({
           ...li,
           unitPrice: li.unitPrice === '' ? 0 : Number(li.unitPrice),
-          quantity: Number(li.quantity)
+          quantity: Number(li.quantity),
+          quantityReceived: 0 // always start at 0
         })),
         subtotal,
         shippingCost: shippingCost === '' ? 0 : Number(shippingCost),
@@ -97,16 +186,20 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
         total,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
+        statusHistory: [
+          {
+            status: "Created",
+            at: new Date().toISOString(),
+            by: userProfile.displayName || userProfile.name || userProfile.email || "Unknown"
+          }
+        ]
       };
       await addDoc(collection(db, 'purchase_orders'), poData);
       showNotification('Purchase Order created!', 'success');
       onClose();
     } catch (err) {
-      if (!errorReported.current) {
-        logError('PurchaseOrderForm-Submit', err);
-        showNotification('Failed to create PO: ' + err.message, 'error');
-        errorReported.current = true;
-      }
+      logError('PurchaseOrderForm-Submit', err);
+      showNotification('Failed to create PO: ' + err.message, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -149,6 +242,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                   <th className="px-2 py-1">Qty</th>
                   <th className="px-2 py-1">Unit Price</th>
                   <th className="px-2 py-1">Category</th>
+                  <th className="px-2 py-1">Inventory/Part Link</th>
                   <th className="px-2 py-1">Notes</th>
                   <th />
                 </tr>
@@ -181,10 +275,45 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                       </div>
                     </td>
                     <td>
-                      <select className={inputClass} value={item.category} onChange={e => handleLineChange(idx, 'category', e.target.value)}>
+                      <select className={inputClass} value={item.category} onChange={e => handleLineCategoryChange(idx, e.target.value)}>
                         <option value="Inventory">Inventory</option>
                         <option value="Part">Part</option>
                       </select>
+                    </td>
+                    <td>
+                      {item.category === 'Inventory' ? (
+                        <div className="flex items-center gap-1">
+                          <select
+                            className={inputClass}
+                            value={item.inventoryId || ''}
+                            onChange={e => handleLinkSelect(idx, e.target.value)}
+                            required
+                          >
+                            <option value="" disabled>Select Inventory...</option>
+                            {inventory.map(inv => (
+                              <option key={inv.id} value={inv.id}>{inv.name || inv.id}</option>
+                            ))}
+                            <option value="_create_new">+ Create New...</option>
+                          </select>
+                          {item.inventoryId === '_create_new' && handleCreateNew(idx)}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <select
+                            className={inputClass}
+                            value={item.partId || ''}
+                            onChange={e => handleLinkSelect(idx, e.target.value)}
+                            required
+                          >
+                            <option value="" disabled>Select Part...</option>
+                            {parts.map(part => (
+                              <option key={part.id} value={part.id}>{part.name || part.id}</option>
+                            ))}
+                            <option value="_create_new">+ Create New...</option>
+                          </select>
+                          {item.partId === '_create_new' && handleCreateNew(idx)}
+                        </div>
+                      )}
                     </td>
                     <td>
                       <input type="text" className={inputClass} value={item.notes} onChange={e => handleLineChange(idx, 'notes', e.target.value)} />
@@ -273,6 +402,22 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
             </button>
           </div>
         </form>
+        {showCreateInventory && (
+          <CreateInventoryModal
+            userProfile={userProfile}
+            onCreated={handleCreatedInventory}
+            onClose={() => setShowCreateInventory(false)}
+            showNotification={showNotification}
+          />
+        )}
+        {showCreatePart && (
+          <CreatePartModal
+            userProfile={userProfile}
+            onCreated={handleCreatedPart}
+            onClose={() => setShowCreatePart(false)}
+            showNotification={showNotification}
+          />
+        )}
       </div>
     </div>
   );

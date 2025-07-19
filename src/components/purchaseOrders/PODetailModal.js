@@ -1,8 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
+import React, { useState, useRef, useEffect } from 'react';
+import { doc, updateDoc, getDocs, collection } from 'firebase/firestore';
 import { db } from '../../firebase';
 import logError from '../../utils/logError';
 import POReceiveModal from './POReceiveModal';
+import CreateInventoryModal from './CreateInventoryModal';
+import CreatePartModal from './CreatePartModal';
 
 const inputClass =
   "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
@@ -40,11 +42,32 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const [saving, setSaving] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
 
+  // Inventory/Parts
+  const [inventory, setInventory] = useState([]);
+  const [parts, setParts] = useState([]);
+  const [showCreateInventory, setShowCreateInventory] = useState(false);
+  const [showCreatePart, setShowCreatePart] = useState(false);
+  const [pendingLineIndex, setPendingLineIndex] = useState(null);
+
+  useEffect(() => {
+    // Load inventory and parts for linking
+    const fetchItems = async () => {
+      try {
+        const invSnap = await getDocs(collection(db, 'inventory'));
+        setInventory(invSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const partSnap = await getDocs(collection(db, 'parts'));
+        setParts(partSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        // fallback: do nothing
+      }
+    };
+    fetchItems();
+  }, [showCreateInventory, showCreatePart]);
+
   // Prevent endless error logging/notifications
   const errorReported = useRef(false);
 
   const canEdit = formState.status === 'Created' && userProfile.groupId === po.groupId;
-
   const canReceive = (po.status === 'Created' || po.status === 'Partially Received');
 
   const subtotal = formState.lineItems.reduce(
@@ -61,10 +84,24 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     }));
   };
 
+  const handleLineCategoryChange = (index, value) => {
+    setFormState(state => ({
+      ...state,
+      lineItems: state.lineItems.map((item, i) =>
+        i === index
+          ? { ...item, category: value, inventoryId: '', partId: '' }
+          : item
+      )
+    }));
+  };
+
   const handleAddLine = () => {
     setFormState(state => ({
       ...state,
-      lineItems: [...state.lineItems, { description: '', quantity: 1, unitPrice: '', category: 'Inventory', notes: '', quantityReceived: 0 }]
+      lineItems: [
+        ...state.lineItems,
+        { description: '', quantity: 1, unitPrice: '', category: 'Inventory', notes: '', inventoryId: '', partId: '', quantityReceived: 0 }
+      ]
     }));
   };
 
@@ -107,9 +144,60 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     setFormState(state => ({ ...state, [field]: e.target.value }));
   };
 
+  const handleLinkSelect = (idx, value) => {
+    setFormState(state => ({
+      ...state,
+      lineItems: state.lineItems.map((item, i) =>
+        i === idx
+          ? item.category === 'Inventory'
+            ? { ...item, inventoryId: value, partId: '' }
+            : { ...item, partId: value, inventoryId: '' }
+          : item
+      )
+    }));
+  };
+
+  const handleCreateNew = (idx) => {
+    const cat = formState.lineItems[idx].category;
+    setPendingLineIndex(idx);
+    if (cat === 'Inventory') setShowCreateInventory(true);
+    else setShowCreatePart(true);
+  };
+
+  // After creating a new inv/part, auto-link it to the pending line
+  const handleCreatedInventory = (newInv) => {
+    setShowCreateInventory(false);
+    if (pendingLineIndex !== null) {
+      handleLinkSelect(pendingLineIndex, newInv.id);
+      setPendingLineIndex(null);
+    }
+    setInventory(inv => [...inv, newInv]);
+  };
+  const handleCreatedPart = (newPart) => {
+    setShowCreatePart(false);
+    if (pendingLineIndex !== null) {
+      handleLinkSelect(pendingLineIndex, newPart.id);
+      setPendingLineIndex(null);
+    }
+    setParts(parts => [...parts, newPart]);
+  };
+
   const saveEdits = async () => {
     setSaving(true);
     errorReported.current = false; // Reset on new attempt
+    // Validate all line items are linked
+    for (const li of formState.lineItems) {
+      if (li.category === 'Inventory' && !li.inventoryId) {
+        showNotification('All inventory line items must be linked to an inventory item.', 'error');
+        setSaving(false);
+        return;
+      }
+      if (li.category === 'Part' && !li.partId) {
+        showNotification('All part line items must be linked to a part.', 'error');
+        setSaving(false);
+        return;
+      }
+    }
     try {
       await updateDoc(doc(db, 'purchase_orders', po.id), {
         vendor: formState.vendor,
@@ -145,6 +233,19 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
 
   // Render status history if present
   const statusHistory = po.statusHistory || [];
+
+  // Helper: get linked display name
+  const getLinkedDisplay = (item) => {
+    if (item.category === 'Inventory' && item.inventoryId) {
+      const inv = inventory.find(inv => inv.id === item.inventoryId);
+      return inv ? (inv.name || inv.id) : item.inventoryId;
+    }
+    if (item.category === 'Part' && item.partId) {
+      const part = parts.find(part => part.id === item.partId);
+      return part ? (part.name || part.id) : item.partId;
+    }
+    return '';
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
@@ -194,10 +295,11 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
             <thead>
               <tr>
                 <th className="px-2 py-1">Description</th>
-                <th className="px-2 py-1">Qty Ordered</th>
-                <th className="px-2 py-1">Qty Received</th>
+                <th className="px-2 py-1 text-center">Qty Ordered</th>
+                <th className="px-2 py-1 text-center">Qty Received</th>
                 <th className="px-2 py-1">Unit Price</th>
                 <th className="px-2 py-1">Category</th>
+                <th className="px-2 py-1">Inventory/Part Link</th>
                 <th className="px-2 py-1">Notes</th>
                 {editMode && <th />}
               </tr>
@@ -211,7 +313,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                         onChange={e => handleLineChange(idx, 'description', e.target.value)} required />
                     ) : item.description}
                   </td>
-                  <td>
+                  <td className="text-center">
                     {editMode ? (
                       <input type="number" className={inputClass} value={item.quantity}
                         min={1} style={{ width: 60 }}
@@ -219,7 +321,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                         required />
                     ) : item.quantity}
                   </td>
-                  <td>
+                  <td className="text-center">
                     {typeof item.quantityReceived === 'number'
                       ? item.quantityReceived
                       : 0}
@@ -248,12 +350,50 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                   </td>
                   <td>
                     {editMode ? (
-                      <select className={inputClass} value={item.category}
-                        onChange={e => handleLineChange(idx, 'category', e.target.value)}>
+                      <select className={inputClass} value={item.category} onChange={e => handleLineCategoryChange(idx, e.target.value)}>
                         <option value="Inventory">Inventory</option>
                         <option value="Part">Part</option>
                       </select>
                     ) : item.category}
+                  </td>
+                  <td>
+                    {editMode ? (
+                      item.category === 'Inventory' ? (
+                        <div className="flex items-center gap-1">
+                          <select
+                            className={inputClass}
+                            value={item.inventoryId || ''}
+                            onChange={e => handleLinkSelect(idx, e.target.value)}
+                            required
+                          >
+                            <option value="" disabled>Select Inventory...</option>
+                            {inventory.map(inv => (
+                              <option key={inv.id} value={inv.id}>{inv.name || inv.id}</option>
+                            ))}
+                            <option value="_create_new">+ Create New...</option>
+                          </select>
+                          {item.inventoryId === '_create_new' && handleCreateNew(idx)}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <select
+                            className={inputClass}
+                            value={item.partId || ''}
+                            onChange={e => handleLinkSelect(idx, e.target.value)}
+                            required
+                          >
+                            <option value="" disabled>Select Part...</option>
+                            {parts.map(part => (
+                              <option key={part.id} value={part.id}>{part.name || part.id}</option>
+                            ))}
+                            <option value="_create_new">+ Create New...</option>
+                          </select>
+                          {item.partId === '_create_new' && handleCreateNew(idx)}
+                        </div>
+                      )
+                    ) : (
+                      <span className="text-sm">{getLinkedDisplay(item) || <span className="text-red-500">Not linked</span>}</span>
+                    )}
                   </td>
                   <td>
                     {editMode ? (
@@ -440,6 +580,22 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
             userProfile={userProfile}
             showNotification={showNotification}
             onClose={() => setShowReceiveModal(false)}
+          />
+        )}
+        {showCreateInventory && (
+          <CreateInventoryModal
+            userProfile={userProfile}
+            onCreated={handleCreatedInventory}
+            onClose={() => setShowCreateInventory(false)}
+            showNotification={showNotification}
+          />
+        )}
+        {showCreatePart && (
+          <CreatePartModal
+            userProfile={userProfile}
+            onCreated={handleCreatedPart}
+            onClose={() => setShowCreatePart(false)}
+            showNotification={showNotification}
           />
         )}
       </div>

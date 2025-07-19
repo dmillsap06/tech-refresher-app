@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { db } from '../../firebase';
 import logError from '../../utils/logError';
 
@@ -14,15 +14,47 @@ function getRemaining(li) {
 }
 
 const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
-  const [step, setStep] = useState('ask-partial'); // 'ask-partial' | 'enter-qty'
+  const [step, setStep] = useState('ask-partial');
   const [receiveAll, setReceiveAll] = useState(true);
-  const [quantities, setQuantities] = useState(() => (
+  const [quantities, setQuantities] = useState(() =>
     po.lineItems.map(li => getRemaining(li))
-  ));
+  );
   const [saving, setSaving] = useState(false);
-
-  // Prevent endless error reporting
   const errorReported = useRef(false);
+
+  // Helper: Show linked display name/id
+  const getLinkedDisplay = (item) => {
+    if (item.category === 'Inventory' && item.inventoryName) return item.inventoryName;
+    if (item.category === 'Part' && item.partName) return item.partName;
+    if (item.category === 'Inventory' && item.inventoryId) return item.inventoryId;
+    if (item.category === 'Part' && item.partId) return item.partId;
+    return '';
+  };
+
+  // Block receive if any line item cannot be matched (enforced)
+  const allLinked = po.lineItems.every(
+    li =>
+      (li.category === 'Inventory' && li.inventoryId) ||
+      (li.category === 'Part' && li.partId)
+  );
+
+  if (!allLinked) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-lg relative">
+          <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+          <h2 className="text-xl font-bold mb-4 text-red-700 dark:text-red-300">Cannot Receive</h2>
+          <p className="mb-6 text-red-600">All line items must be linked to an inventory or part item before receiving.</p>
+          <div className="flex justify-end">
+            <button
+              className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
+              onClick={onClose}
+            >Close</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Step 1: Ask if they want to receive all or partial
   if (step === 'ask-partial') {
@@ -115,6 +147,25 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
         note: summary
       });
 
+      // Update inventory/parts
+      for (let idx = 0; idx < newLineItems.length; idx++) {
+        const li = po.lineItems[idx];
+        const qty = Number(quantities[idx] || 0);
+        if (qty > 0) {
+          if (li.category === 'Inventory' && li.inventoryId) {
+            await updateDoc(doc(db, 'inventory', li.inventoryId), {
+              stock: increment(qty),
+              updatedAt: serverTimestamp()
+            });
+          } else if (li.category === 'Part' && li.partId) {
+            await updateDoc(doc(db, 'parts', li.partId), {
+              stock: increment(qty),
+              updatedAt: serverTimestamp()
+            });
+          }
+        }
+      }
+
       await updateDoc(doc(db, 'purchase_orders', po.id), {
         lineItems: newLineItems,
         status: newStatus,
@@ -150,9 +201,10 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
           <thead>
             <tr>
               <th className="px-2 py-1">Description</th>
-              <th className="px-2 py-1">Ordered</th>
-              <th className="px-2 py-1">Previously Received</th>
-              <th className="px-2 py-1">Receive Now</th>
+              <th className="px-2 py-1 text-center">Ordered</th>
+              <th className="px-2 py-1 text-center">Prev. Received</th>
+              <th className="px-2 py-1 text-center">Receive Now</th>
+              <th className="px-2 py-1">Linked Item</th>
             </tr>
           </thead>
           <tbody>
@@ -161,13 +213,13 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
               return (
                 <tr key={idx}>
                   <td>{li.description}</td>
-                  <td>{li.quantity}</td>
-                  <td>{li.quantityReceived || 0}</td>
-                  <td>
+                  <td className="text-center">{li.quantity}</td>
+                  <td className="text-center">{li.quantityReceived || 0}</td>
+                  <td className="text-center">
                     {receiveAll ? (
                       <input
                         type="number"
-                        className={inputClass + " w-24"}
+                        className={inputClass + " w-24 text-center"}
                         value={quantities[idx]}
                         min={0}
                         max={remaining}
@@ -176,7 +228,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
                     ) : (
                       <input
                         type="number"
-                        className={inputClass + " w-24"}
+                        className={inputClass + " w-24 text-center"}
                         value={quantities[idx]}
                         min={0}
                         max={remaining}
@@ -186,6 +238,11 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
                         pattern="[0-9]*"
                       />
                     )}
+                  </td>
+                  <td>
+                    {li.category === 'Inventory'
+                      ? (li.inventoryName || li.inventoryId)
+                      : (li.partName || li.partId)}
                   </td>
                 </tr>
               );
