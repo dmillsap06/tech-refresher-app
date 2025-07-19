@@ -365,8 +365,8 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     );
   })();
 
-  // ---- LINE ITEMS EDIT TABLE ----
-  const lineItemsTable = (
+  // ---- LINE ITEMS TABLES ----
+  const lineItemsEditTable = (
     <div className="mb-6">
       <label className="block font-medium mb-1">Line Items</label>
       <table className="min-w-full border rounded mb-2">
@@ -378,50 +378,44 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
             <th className="px-2 py-1">Qty</th>
             <th className="px-2 py-1">Unit Price</th>
             <th className="px-2 py-1">Total</th>
-            {editMode && <th className="px-2 py-1"></th>}
+            <th className="px-2 py-1"></th>
           </tr>
         </thead>
         <tbody>
           {formState.lineItems.map((li, idx) => (
             <tr key={idx}>
               <td>
-                {editMode ? (
-                  <input
-                    type="text"
-                    className={inputClass}
-                    value={li.description}
-                    onChange={e => handleLineChange(idx, 'description', e.target.value)}
-                  />
-                ) : li.description}
+                <input
+                  type="text"
+                  className={inputClass}
+                  value={li.description}
+                  onChange={e => handleLineChange(idx, 'description', e.target.value)}
+                />
               </td>
               <td>
-                {editMode ? (
-                  <select
-                    className={inputClass}
-                    value={li.category}
-                    onChange={e => handleLineCategoryChange(idx, e.target.value)}
-                  >
-                    <option value="Part">Part</option>
-                    <option value="Accessory">Accessory</option>
-                    <option value="Device">Device</option>
-                    <option value="Game">Game</option>
-                  </select>
-                ) : li.category}
+                <select
+                  className={inputClass}
+                  value={li.category}
+                  onChange={e => handleLineCategoryChange(idx, e.target.value)}
+                >
+                  <option value="Part">Part</option>
+                  <option value="Accessory">Accessory</option>
+                  <option value="Device">Device</option>
+                  <option value="Game">Game</option>
+                </select>
               </td>
               <td>
-                {editMode ? (
-                  <select
-                    className={inputClass}
-                    value={li.linkedId}
-                    onChange={e => handleLineChange(idx, 'linkedId', e.target.value)}
-                  >
-                    <option value="">Select</option>
-                    {getCatalogList(li.category).map(item => (
-                      <option key={item.id} value={item.id}>{item.name || item.id}</option>
-                    ))}
-                  </select>
-                ) : getLinkedDisplay(li)}
-                {editMode && li.category === 'Part' && (
+                <select
+                  className={inputClass}
+                  value={li.linkedId}
+                  onChange={e => handleLineChange(idx, 'linkedId', e.target.value)}
+                >
+                  <option value="">Select</option>
+                  {getCatalogList(li.category).map(item => (
+                    <option key={item.id} value={item.id}>{item.name || item.id}</option>
+                  ))}
+                </select>
+                {li.category === 'Part' && (
                   <button
                     className="ml-2 px-2 py-1 bg-green-200 rounded text-xs"
                     type="button"
@@ -431,7 +425,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                     }}
                   >+ New</button>
                 )}
-                {editMode && li.category === 'Device' && (
+                {li.category === 'Device' && (
                   <button
                     className="ml-2 px-2 py-1 bg-green-200 rounded text-xs"
                     type="button"
@@ -443,59 +437,81 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
                 )}
               </td>
               <td>
-                {editMode ? (
-                  <input
-                    type="number"
-                    className={inputClass}
-                    value={li.quantity}
-                    min={1}
-                    onChange={e => handleLineChange(idx, 'quantity', e.target.value.replace(/[^0-9]/g, ''))}
-                  />
-                ) : li.quantity}
+                <input
+                  type="number"
+                  className={inputClass}
+                  value={li.quantity}
+                  min={1}
+                  onChange={e => handleLineChange(idx, 'quantity', e.target.value.replace(/[^0-9]/g, ''))}
+                />
               </td>
               <td>
-                {editMode ? (
-                  <div className={dollarInputWrapper}>
-                    <span className={dollarPrefix}>$</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className={inputClass + " pl-6"}
-                      value={li.unitPrice}
-                      onChange={e => handleLineChange(idx, 'unitPrice', e.target.value.replace(/[^0-9.]/g, ''))}
-                    />
-                  </div>
-                ) : formatMoney(li.unitPrice)}
+                <div className={dollarInputWrapper}>
+                  <span className={dollarPrefix}>$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className={inputClass + " pl-6"}
+                    value={li.unitPrice}
+                    onChange={e => handleLineChange(idx, 'unitPrice', e.target.value.replace(/[^0-9.]/g, ''))}
+                  />
+                </div>
               </td>
               <td>
                 {formatMoney(Number(li.quantity) * Number(li.unitPrice || 0))}
               </td>
-              {editMode && (
-                <td>
-                  <button
-                    type="button"
-                    className="px-2 py-1 bg-red-300 rounded text-xs"
-                    onClick={() => handleRemoveLine(idx)}
-                  >Remove</button>
-                </td>
-              )}
+              <td>
+                <button
+                  type="button"
+                  className="px-2 py-1 bg-red-300 rounded text-xs"
+                  onClick={() => handleRemoveLine(idx)}
+                >Remove</button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
-      {editMode && (
-        <button
-          type="button"
-          className="mt-2 px-4 py-2 bg-green-600 text-white rounded"
-          onClick={handleAddLine}
-        >+ Add Line Item</button>
-      )}
+      <button
+        type="button"
+        className="mt-2 px-4 py-2 bg-green-600 text-white rounded"
+        onClick={handleAddLine}
+      >+ Add Line Item</button>
+    </div>
+  );
+
+  const lineItemsViewTable = (
+    <div className="mb-6">
+      <label className="block font-medium mb-1">Line Items</label>
+      <table className="min-w-full border rounded mb-2">
+        <thead>
+          <tr>
+            <th className="px-2 py-1">Description</th>
+            <th className="px-2 py-1">Category</th>
+            <th className="px-2 py-1">Catalog Item</th>
+            <th className="px-2 py-1">Qty</th>
+            <th className="px-2 py-1">Unit Price</th>
+            <th className="px-2 py-1">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {formState.lineItems.map((li, idx) => (
+            <tr key={idx}>
+              <td>{li.description}</td>
+              <td>{li.category}</td>
+              <td>{getLinkedDisplay(li)}</td>
+              <td>{li.quantity}</td>
+              <td>{formatMoney(li.unitPrice)}</td>
+              <td>{formatMoney(Number(li.quantity) * Number(li.unitPrice || 0))}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-7xl relative flex flex-col h-[98vh]">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-4xl max-h-[90vh] relative flex flex-col overflow-y-auto">
         <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
         <div className="flex items-center mb-4">
           <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
@@ -537,7 +553,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
             />
           ) : <div>{formatFriendlyDate(formState.date)}</div>}
         </div>
-        {lineItemsTable}
+        {editMode ? lineItemsEditTable : lineItemsViewTable}
         <div className="mb-6">
           <label className="block font-medium mb-1">Notes</label>
           {editMode ? (
