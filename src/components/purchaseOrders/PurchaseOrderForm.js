@@ -79,7 +79,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     const catDefs = [
       { key: "Part", col: "parts" },
       { key: "Accessory", col: "accessories" },
-      { key: "Device", col: "devices" },
+      { key: "Device", col: "deviceTypes" },  // <-- Correct here!
       { key: "Game", col: "games" }
     ];
 
