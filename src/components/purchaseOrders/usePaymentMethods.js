@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getPaymentMethods } from '../settings/paymentMethodsApi';
+import { getPaymentMethods } from '../Settings/paymentMethodsApi';
 
 // This hook fetches the organization's payment methods for use in PO flows.
 // Pass in groupId from the user's profile/context.
