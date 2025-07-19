@@ -40,7 +40,8 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
     const [selectedDevice, setSelectedDevice] = useState(null);
 
     const [newBrand, setNewBrand] = useState('');
-    const [newDevice, setNewDevice] = useState({ name: '', type: 'Console' });
+    // Change default type from 'Console' to 'Device'
+    const [newDevice, setNewDevice] = useState({ name: '', type: 'Device' });
     const [newColor, setNewColor] = useState('');
     const [newPart, setNewPart] = useState({ name: '', hasColor: false });
     const [newAccessory, setNewAccessory] = useState({ name: '', cost: 0 });
@@ -125,7 +126,7 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
                             newBrandsStructure[brand] = { devices: {} };
                         }
                         newBrandsStructure[brand].devices[deviceType] = {
-                            type: 'Console',
+                            type: 'Device',
                             ...data.types[deviceType]
                         };
                     }
@@ -186,7 +187,7 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
         try {
             await setDoc(doc(db, 'settings', 'deviceConfiguration'), { brands: updatedBrands });
             showNotification(`Device "${newDevice.name.trim()}" added.`, 'success');
-            setNewDevice({ name: '', type: 'Console' });
+            setNewDevice({ name: '', type: 'Device' });
         } catch(error) {
             logError('Settings-AddDevice', error);
             showNotification('Failed to add device.', 'error');
@@ -422,12 +423,7 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
                 {/* CATALOG TAB */}
                 {activeTab === "catalog" && (
                     <div>
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg mb-8">
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">How to Use This Page</h2>
-                            <p className="mt-2 text-gray-600 dark:text-gray-400">
-                                Follow the steps from left to right to build your product catalog. First, add a brand. Then, select that brand to add its devices. Finally, select a device to add its specific properties like colors and parts.
-                            </p>
-                        </div>
+                        {/* Remove "How to Use This Page" section */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {/* --- Brands Column --- */}
                             <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
@@ -446,20 +442,20 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
                                 </ul>
                             </div>
 
-                            {/* --- Devices Column --- */}
+                            {/* --- Product Types Column --- */}
                             <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
-                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Step 2: Devices</h3>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Step 2: Product Types</h3>
                                 {selectedBrand ? (
                                     <div>
                                         <form onSubmit={handleAddDevice} className="space-y-2 mb-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                            <input type="text" value={newDevice.name} onChange={(e) => setNewDevice({...newDevice, name: e.target.value})} placeholder={`Add new ${selectedBrand} device`} className="w-full input"/>
+                                            <input type="text" value={newDevice.name} onChange={(e) => setNewDevice({...newDevice, name: e.target.value})} placeholder={`Add new ${selectedBrand} product`} className="w-full input"/>
                                             <select value={newDevice.type} onChange={(e) => setNewDevice({...newDevice, type: e.target.value})} className="w-full input">
-                                                <option>Console</option>
+                                                <option>Device</option>
                                                 <option>Game</option>
                                                 <option>Accessory</option>
                                                 <option>Other</option>
                                             </select>
-                                            <button type="submit" className="btn-primary w-full">Add Device</button>
+                                            <button type="submit" className="btn-primary w-full">Add Product</button>
                                         </form>
                                         <ul className="space-y-2">
                                             {Object.keys(brands[selectedBrand].devices).sort().map(device => (
@@ -470,7 +466,7 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
                                             ))}
                                         </ul>
                                     </div>
-                                ) : <div className="text-center text-gray-500 pt-16"><p>Select a brand to see its devices.</p></div>}
+                                ) : <div className="text-center text-gray-500 pt-16"><p>Select a brand to see its product types.</p></div>}
                             </div>
 
                             {/* --- Properties Column --- */}
@@ -522,7 +518,7 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
                                             </ul>
                                         </div>
                                     </div>
-                                ) : <div className="text-center text-gray-500 pt-16"><p>Select a device to see its properties.</p></div>}
+                                ) : <div className="text-center text-gray-500 pt-16"><p>Select a product type to see its properties.</p></div>}
                             </div>
                         </div>
                     </div>
