@@ -15,10 +15,7 @@ const defaultLineItem = {
   linkedId: ''
 };
 
-const inputClass =
-  "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
-const inputCenterClass =
-  inputClass + " text-center";
+const inputClass = "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full text-center";
 const dollarInputWrapper = "relative";
 const dollarPrefix = "absolute left-2 inset-y-0 flex items-center text-gray-400 pointer-events-none";
 
@@ -52,23 +49,18 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const [searchTerms, setSearchTerms] = useState({});
   const [debouncedSearchTerms, setDebouncedSearchTerms] = useState({});
   const [dropdownActiveIdx, setDropdownActiveIdx] = useState({});
-  const [catalogOptions, setCatalogOptions] = useState({}); // { [lineIdx]: [options] }
-  const [catalogLoading, setCatalogLoading] = useState({}); // { [lineIdx]: bool }
-  const [catalogErrors, setCatalogErrors] = useState({}); // { [lineIdx]: errorMsg }
+  const [catalogOptions, setCatalogOptions] = useState({});
+  const [catalogLoading, setCatalogLoading] = useState({});
+  const [catalogErrors, setCatalogErrors] = useState({});
 
-  // Modal state for "Add New"
   const [showCreateModal, setShowCreateModal] = useState({ open: false, category: null, lineIdx: null });
 
-  // Keep a ref to the last fetched search to avoid race conditions
   const latestFetchRef = useRef({});
-
-  // Debounce search terms for async fetch
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerms(searchTerms), 200);
     return () => clearTimeout(handler);
   }, [searchTerms]);
 
-  // Async fetch catalog options for a line item
   const fetchCatalogOptions = async (category, searchTerm, lineIdx) => {
     if (!userProfile?.groupId) return;
     setCatalogLoading(prev => ({ ...prev, [lineIdx]: true }));
@@ -80,7 +72,6 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     else if (category === "Game") col = "games";
     else return;
 
-    // For text search, use Firestore range queries (prefix match)
     let q;
     const terms = (searchTerm || "").trim();
     if (terms.length > 0) {
@@ -121,7 +112,6 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     }
   };
 
-  // Refetch catalog options when debounced search or category changes
   useEffect(() => {
     lineItems.forEach((item, idx) => {
       fetchCatalogOptions(item.category, debouncedSearchTerms[idx] || "", idx);
@@ -129,7 +119,6 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     // eslint-disable-next-line
   }, [debouncedSearchTerms, lineItems.map(i => i.category).join(",")]);
 
-  // Keyboard navigation for dropdown
   const dropdownRefs = useRef({});
   const handleDropdownKeyDown = (idx, filteredCatalog, e) => {
     let curIdx = dropdownActiveIdx[idx] ?? -1;
@@ -160,11 +149,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     setLineItems(items =>
       items.map((item, i) =>
         i === index
-          ? {
-              ...item,
-              category: value,
-              linkedId: ''
-            }
+          ? { ...item, category: value, linkedId: '' }
           : item
       )
     );
@@ -179,7 +164,6 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   );
   const total = subtotal + Number(tax || 0) + Number(shippingCost || 0) + Number(otherFees || 0);
 
-  // For dollar fields: allow only numbers and one dot, but keep as string for easier typing
   const handleDollarChange = setter => e => {
     let val = e.target.value.replace(/[^0-9.]/g, '');
     if ((val.match(/\./g) || []).length > 1) return;
@@ -224,7 +208,6 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     );
   };
 
-  // After creating a new catalog item, update and link it
   const handleCreatedCatalogItem = (category, newItem) => {
     setShowCreateModal({ open: false, category: null, lineIdx: null });
     if (showCreateModal.lineIdx !== null) {
@@ -292,7 +275,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-50" style={{ minHeight: "100vh" }}>
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-7xl relative flex flex-col h-[98vh]">
         <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
         <h2 className="text-2xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">New Purchase Order</h2>
@@ -321,6 +304,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
           {/* Line Items */}
           <div className="mb-3 flex-1 flex flex-col min-h-0">
             <label className="block font-medium mb-2">Line Items</label>
+            {/* Make table scrollable */}
             <div className="flex-1 min-h-0 overflow-y-auto">
               <table className="min-w-full border rounded mb-2 text-sm">
                 <thead>
@@ -345,17 +329,17 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                     return (
                       <tr key={idx}>
                         <td className="align-middle text-center">
-                          <input type="text" className={inputCenterClass} value={item.description} onChange={e => handleLineChange(idx, 'description', e.target.value)} required />
+                          <input type="text" className={inputClass} value={item.description} onChange={e => handleLineChange(idx, 'description', e.target.value)} required />
                         </td>
                         <td className="align-middle text-center">
-                          <input type="number" className={inputCenterClass} value={item.quantity} min={1} style={{ width: 60 }} onChange={e => handleLineChange(idx, 'quantity', e.target.value)} required />
+                          <input type="number" className={inputClass} value={item.quantity} min={1} style={{ width: 60 }} onChange={e => handleLineChange(idx, 'quantity', e.target.value)} required />
                         </td>
                         <td className="align-middle text-center">
                           <div className={dollarInputWrapper}>
                             <span className={dollarPrefix}>$</span>
                             <input
                               type="text"
-                              className={inputCenterClass + " pl-6"}
+                              className={inputClass + " pl-6"}
                               value={item.unitPrice}
                               min={0}
                               step="0.01"
@@ -369,7 +353,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                           </div>
                         </td>
                         <td className="align-middle text-center">
-                          <select className={inputCenterClass} value={item.category} onChange={e => handleLineCategoryChange(idx, e.target.value)}>
+                          <select className={inputClass} value={item.category} onChange={e => handleLineCategoryChange(idx, e.target.value)}>
                             <option value="Part">Part</option>
                             <option value="Accessory">Accessory</option>
                             <option value="Device">Device</option>
@@ -384,7 +368,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                               <>
                                 <input
                                   type="text"
-                                  className={inputCenterClass + " mb-1"}
+                                  className={inputClass + " mb-1"}
                                   placeholder={`Search ${categoryDisplayMap[category]}...`}
                                   value={searchTerm}
                                   onChange={e => handleSearchChange(idx, e.target.value)}
@@ -394,7 +378,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                                 <div className="relative">
                                   <select
                                     ref={el => (dropdownRefs.current[`${idx}`] = el)}
-                                    className={inputCenterClass + " appearance-none"}
+                                    className={inputClass + " appearance-none"}
                                     value={item.linkedId || ''}
                                     onChange={e => handleLinkSelect(idx, e.target.value)}
                                     required
