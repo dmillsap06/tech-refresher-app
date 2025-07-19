@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import logError from '../utils/logError';
 
-// Simple checkmark icon for resolved, and a subtle check-circle for resolve action
 const CheckCircleIcon = ({ className = "" }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 20 20">
         <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -16,7 +16,7 @@ const CheckIcon = ({ className = "" }) => (
     </svg>
 );
 
-const ErrorLog = ({ onBack }) => {
+const ErrorLog = ({ onBack, showNotification }) => {
     const [errorLogs, setErrorLogs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [updating, setUpdating] = useState({}); // Track updating state per log
@@ -30,12 +30,13 @@ const ErrorLog = ({ onBack }) => {
             setErrorLogs(logs);
             setIsLoading(false);
         }, (error) => {
-            console.error("Error fetching error logs: ", error);
+            logError && logError("ErrorLog-Fetch", error);
             setIsLoading(false);
+            if (showNotification) showNotification("Failed to load error logs.", "error");
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [showNotification]);
 
     const markResolved = async (id) => {
         setUpdating(prev => ({ ...prev, [id]: true }));
@@ -43,8 +44,8 @@ const ErrorLog = ({ onBack }) => {
             const logRef = doc(db, 'error_logs', id);
             await updateDoc(logRef, { resolved: true });
         } catch (err) {
-            alert('Failed to mark as resolved. See console for details.');
-            console.error(err);
+            logError && logError('ErrorLog-MarkResolved', err);
+            if (showNotification) showNotification('Failed to mark as resolved. See console for details.', 'error');
         } finally {
             setUpdating(prev => ({ ...prev, [id]: false }));
         }

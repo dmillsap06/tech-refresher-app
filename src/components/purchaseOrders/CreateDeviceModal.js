@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
+import logError from '../../utils/logError';
 
 const inputClass =
   "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
@@ -13,10 +14,6 @@ const CreateDeviceModal = ({ userProfile, onCreated, onClose, showNotification }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) {
-      showNotification('Device name cannot be empty.', 'error');
-      return;
-    }
     setSaving(true);
     try {
       const docRef = await addDoc(collection(db, 'devices'), {
@@ -29,6 +26,7 @@ const CreateDeviceModal = ({ userProfile, onCreated, onClose, showNotification }
       onCreated({ id: docRef.id, name, model, sku, groupId: userProfile.groupId });
       showNotification('Device created!', 'success');
     } catch (err) {
+      logError('CreateDeviceModal-handleSubmit', err);
       showNotification('Failed to create device: ' + err.message, 'error');
     } finally {
       setSaving(false);

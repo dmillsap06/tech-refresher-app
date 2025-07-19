@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
+import logError from '../../utils/logError';
 
 const inputClass =
   "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
@@ -33,6 +34,7 @@ const CreateInventoryModal = ({ userProfile, onCreated, onClose, showNotificatio
       });
       showNotification('Inventory item created!', 'success');
     } catch (err) {
+      logError('CreateInventoryModal-handleSubmit', err);
       showNotification('Failed to create inventory item: ' + err.message, 'error');
     } finally {
       setSaving(false);

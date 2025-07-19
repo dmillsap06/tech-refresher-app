@@ -19,6 +19,7 @@ const CatalogDeviceTypes = ({ userProfile, showNotification }) => {
   const [selectedBrand, setSelectedBrand] = useState('');
   const [loading, setLoading] = useState(true);
   const [brandsLoading, setBrandsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   // Fetch brands for the dropdown
   useEffect(() => {
@@ -45,6 +46,7 @@ const CatalogDeviceTypes = ({ userProfile, showNotification }) => {
       (error) => {
         logError('CatalogDeviceTypes-onSnapshot-brands', error);
         setBrandsLoading(false);
+        setErrorMsg(error.message || 'Failed to load brands.');
       }
     );
     return () => unsubscribe();
@@ -72,6 +74,7 @@ const CatalogDeviceTypes = ({ userProfile, showNotification }) => {
       (error) => {
         logError('CatalogDeviceTypes-onSnapshot', error);
         setLoading(false);
+        setErrorMsg(error.message || 'Failed to load device types.');
       }
     );
     return () => unsubscribe();
@@ -79,6 +82,7 @@ const CatalogDeviceTypes = ({ userProfile, showNotification }) => {
 
   const handleAddDeviceType = async (e) => {
     e.preventDefault();
+    setErrorMsg(null);
     if (!newDeviceType.trim()) {
       showNotification('Device type name cannot be empty.', 'error');
       return;
@@ -98,18 +102,21 @@ const CatalogDeviceTypes = ({ userProfile, showNotification }) => {
       showNotification('Device type added!', 'success');
     } catch (error) {
       logError('CatalogDeviceTypes-AddDeviceType', error);
-      showNotification('Failed to add device type.', 'error');
+      setErrorMsg(error.message || 'Failed to add device type.');
+      showNotification(error.message || 'Failed to add device type.', 'error');
     }
   };
 
   const handleDeleteDeviceType = async (id) => {
+    setErrorMsg(null);
     if (!window.confirm('Are you sure you want to delete this device type?')) return;
     try {
       await deleteDoc(doc(db, 'deviceTypes', id));
       showNotification('Device type deleted.', 'success');
     } catch (error) {
       logError('CatalogDeviceTypes-DeleteDeviceType', error);
-      showNotification('Failed to delete device type.', 'error');
+      setErrorMsg(error.message || 'Failed to delete device type.');
+      showNotification(error.message || 'Failed to delete device type.', 'error');
     }
   };
 
@@ -121,6 +128,11 @@ const CatalogDeviceTypes = ({ userProfile, showNotification }) => {
 
   return (
     <div className="max-w-lg mx-auto">
+      {errorMsg && (
+        <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-200 rounded">
+          Error: {errorMsg}
+        </div>
+      )}
       <form onSubmit={handleAddDeviceType} className="flex flex-col gap-3 mb-6">
         <div className="flex gap-2">
           <input

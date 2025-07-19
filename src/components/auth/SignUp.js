@@ -3,6 +3,7 @@ import { db, auth } from '../../firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { v4 as uuidv4 } from 'uuid';
+import logError from '../../utils/logError';
 
 const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
@@ -51,10 +52,13 @@ const SignUp = ({ onSignUp, onSwitchToLogin, showNotification }) => {
       if (onSignUp) onSignUp(userProfile);
       if (showNotification) showNotification("Account created successfully!", "success");
     } catch (err) {
+      await logError('SignUp-CreateUser', err);
       if (err.code === 'auth/email-already-in-use') {
         setError('Email is already registered.');
+        if (showNotification) showNotification('Email is already registered.', 'error');
       } else {
         setError('Error creating user: ' + err.message);
+        if (showNotification) showNotification('Error creating user: ' + err.message, 'error');
       }
     } finally {
       setIsLoading(false);

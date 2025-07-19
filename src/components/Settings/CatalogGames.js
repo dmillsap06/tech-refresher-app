@@ -24,6 +24,7 @@ const CatalogGames = ({ userProfile, showNotification }) => {
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deviceTypesLoading, setDeviceTypesLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   // Fetch brands for mapping
   useEffect(() => {
@@ -43,6 +44,7 @@ const CatalogGames = ({ userProfile, showNotification }) => {
       },
       (error) => {
         logError('CatalogGames-onSnapshot-brands', error);
+        setErrorMsg(error.message || 'Failed to load brands.');
       }
     );
     return () => unsubscribe();
@@ -69,6 +71,7 @@ const CatalogGames = ({ userProfile, showNotification }) => {
       (error) => {
         logError('CatalogGames-onSnapshot-deviceTypes', error);
         setDeviceTypesLoading(false);
+        setErrorMsg(error.message || 'Failed to load device types.');
       }
     );
     return () => unsubscribe();
@@ -95,6 +98,7 @@ const CatalogGames = ({ userProfile, showNotification }) => {
       (error) => {
         logError('CatalogGames-onSnapshot', error);
         setLoading(false);
+        setErrorMsg(error.message || 'Failed to load games.');
       }
     );
     return () => unsubscribe();
@@ -128,6 +132,7 @@ const CatalogGames = ({ userProfile, showNotification }) => {
   // Handle add or update
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMsg(null);
     if (!newGame.trim()) {
       showNotification('Game name cannot be empty.', 'error');
       return;
@@ -169,19 +174,22 @@ const CatalogGames = ({ userProfile, showNotification }) => {
       setEditingId(null);
     } catch (error) {
       logError('CatalogGames-Submit', error);
-      showNotification('Failed to save game.', 'error');
+      setErrorMsg(error.message || 'Failed to save game.');
+      showNotification(error.message || 'Failed to save game.', 'error');
     }
   };
 
   // Handle delete
   const handleDeleteGame = async (id) => {
+    setErrorMsg(null);
     if (!window.confirm('Are you sure you want to delete this game?')) return;
     try {
       await deleteDoc(doc(db, 'games', id));
       showNotification('Game deleted.', 'success');
     } catch (error) {
       logError('CatalogGames-DeleteGame', error);
-      showNotification('Failed to delete game.', 'error');
+      setErrorMsg(error.message || 'Failed to delete game.');
+      showNotification(error.message || 'Failed to delete game.', 'error');
     }
   };
 
@@ -203,6 +211,11 @@ const CatalogGames = ({ userProfile, showNotification }) => {
 
   return (
     <div className="max-w-lg mx-auto">
+      {errorMsg && (
+        <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-200 rounded">
+          Error: {errorMsg}
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 mb-6">
         <div className="flex gap-2">
           <input

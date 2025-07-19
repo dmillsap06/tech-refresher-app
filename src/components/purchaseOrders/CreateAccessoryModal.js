@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
+import logError from '../../utils/logError';
 
 const inputClass =
   "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
@@ -10,21 +11,29 @@ const CreateAccessoryModal = ({ userProfile, onCreated, onClose, showNotificatio
   const [deviceTypes, setDeviceTypes] = useState([]);
   const [selectedDeviceTypes, setSelectedDeviceTypes] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchDeviceTypes = async () => {
       if (!userProfile?.groupId) return;
-      const q = query(collection(db, 'deviceTypes'), where('groupId', '==', userProfile.groupId));
-      const snap = await getDocs(q);
-      setDeviceTypes(
-        snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-      );
+      try {
+        const q = query(collection(db, 'deviceTypes'), where('groupId', '==', userProfile.groupId));
+        const snap = await getDocs(q);
+        setDeviceTypes(
+          snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        );
+      } catch (err) {
+        setError('Failed to load device types: ' + err.message);
+        logError('CreateAccessoryModal-fetchDeviceTypes', err);
+        showNotification('Failed to load device types: ' + err.message, 'error');
+      }
     };
     fetchDeviceTypes();
-  }, [userProfile?.groupId]);
+  }, [userProfile?.groupId, showNotification]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     if (!name.trim()) {
       showNotification('Accessory name cannot be empty.', 'error');
       return;
@@ -44,6 +53,8 @@ const CreateAccessoryModal = ({ userProfile, onCreated, onClose, showNotificatio
       onCreated({ id: docRef.id, name, deviceTypeIds: selectedDeviceTypes, groupId: userProfile.groupId });
       showNotification('Accessory created!', 'success');
     } catch (err) {
+      setError('Failed to create accessory: ' + err.message);
+      logError('CreateAccessoryModal-handleSubmit', err);
       showNotification('Failed to create accessory: ' + err.message, 'error');
     } finally {
       setSaving(false);
@@ -55,6 +66,9 @@ const CreateAccessoryModal = ({ userProfile, onCreated, onClose, showNotificatio
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-lg relative">
         <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
         <h2 className="text-xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">Create Accessory</h2>
+        {error && (
+          <div className="mb-3 text-red-600 bg-red-100 dark:bg-red-900/50 p-2 rounded">{error}</div>
+        )}
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
             <label className="block font-medium mb-1">Name</label>

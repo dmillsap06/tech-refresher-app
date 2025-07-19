@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { getPaymentMethods, deletePaymentMethod, savePaymentMethod } from './paymentMethodsApi';
 import EditPaymentMethodModal from './EditPaymentMethodModal';
+import logError from '../../utils/logError';
 
-export default function PaymentMethodsList({ userProfile }) {
+export default function PaymentMethodsList({ userProfile, showNotification }) {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingMethod, setEditingMethod] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   useEffect(() => {
     fetchMethods();
@@ -15,11 +17,16 @@ export default function PaymentMethodsList({ userProfile }) {
 
   async function fetchMethods() {
     setLoading(true);
+    setErrorMsg(null);
     try {
       const methods = await getPaymentMethods(userProfile.groupId);
       setPaymentMethods(methods);
     } catch (err) {
-      alert('Failed to load payment methods.');
+      setErrorMsg(err.message || 'Failed to load payment methods.');
+      logError('PaymentMethodsList-FetchMethods', err);
+      if (showNotification) {
+        showNotification(`Failed to load payment methods: ${err.message}`, 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -36,9 +43,21 @@ export default function PaymentMethodsList({ userProfile }) {
   }
 
   async function handleDelete(method) {
+    setErrorMsg(null);
     if (window.confirm(`Delete ${method.nickname || method.type}?`)) {
-      await deletePaymentMethod(userProfile.groupId, method.id);
-      fetchMethods();
+      try {
+        await deletePaymentMethod(userProfile.groupId, method.id);
+        fetchMethods();
+        if (showNotification) {
+          showNotification('Payment method deleted.', 'success');
+        }
+      } catch (err) {
+        setErrorMsg(err.message || 'Failed to delete payment method.');
+        logError('PaymentMethodsList-Delete', err);
+        if (showNotification) {
+          showNotification(`Failed to delete payment method: ${err.message}`, 'error');
+        }
+      }
     }
   }
 
@@ -50,11 +69,26 @@ export default function PaymentMethodsList({ userProfile }) {
 
   // Toggle active state directly from the list
   async function handleToggleActive(method) {
-    await savePaymentMethod(userProfile.groupId, {
-      ...method,
-      active: !(method.active !== false), // undefined/true -> false, false -> true
-    });
-    fetchMethods();
+    setErrorMsg(null);
+    try {
+      await savePaymentMethod(userProfile.groupId, {
+        ...method,
+        active: !(method.active !== false), // undefined/true -> false, false -> true
+      });
+      fetchMethods();
+      if (showNotification) {
+        showNotification(
+          `Payment method "${method.nickname}" is now ${method.active !== false ? 'inactive' : 'active'}.`,
+          'success'
+        );
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to update payment method status.');
+      logError('PaymentMethodsList-ToggleActive', err);
+      if (showNotification) {
+        showNotification(`Failed to update payment method status: ${err.message}`, 'error');
+      }
+    }
   }
 
   return (
@@ -66,6 +100,11 @@ export default function PaymentMethodsList({ userProfile }) {
           onClick={handleAdd}
         >Add Payment Method</button>
       </div>
+      {errorMsg && (
+        <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-200 rounded">
+          Error: {errorMsg}
+        </div>
+      )}
       {loading ? (
         <div>Loading...</div>
       ) : paymentMethods.length === 0 ? (
