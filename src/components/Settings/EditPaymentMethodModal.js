@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { savePaymentMethod } from './paymentMethodsApi';
+import logError from '../../utils/logError';
 
 const typeOptions = [
   { value: '', label: 'Select type' },
@@ -21,6 +22,7 @@ export default function EditPaymentMethodModal({ open, onClose, method, groupId 
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   useEffect(() => {
     if (method) {
@@ -37,10 +39,12 @@ export default function EditPaymentMethodModal({ open, onClose, method, groupId 
       setActive(true);
     }
     setTouched(false);
+    setErrorMsg(null);
   }, [method, open]);
 
   function handleSave() {
     setTouched(true);
+    setErrorMsg(null);
     if (!type || !nickname || !lastFour.match(/^\d{4}$/)) return;
     setSaving(true);
     savePaymentMethod(groupId, {
@@ -53,9 +57,10 @@ export default function EditPaymentMethodModal({ open, onClose, method, groupId 
     }).then(() => {
       setSaving(false);
       onClose(true);
-    }).catch(() => {
+    }).catch((error) => {
       setSaving(false);
-      alert('Failed to save payment method.');
+      setErrorMsg(error.message || "Failed to save payment method.");
+      logError('EditPaymentMethodModal-Save', error);
     });
   }
 
@@ -67,6 +72,11 @@ export default function EditPaymentMethodModal({ open, onClose, method, groupId 
         <h2 className="text-xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">
           {method ? 'Edit Payment Method' : 'Add Payment Method'}
         </h2>
+        {errorMsg && (
+          <div className="mb-3 p-3 bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-200 rounded">
+            Error: {errorMsg}
+          </div>
+        )}
         <div className="mb-3">
           <label className="block font-medium mb-1">Type<span className="text-red-500">*</span></label>
           <select
