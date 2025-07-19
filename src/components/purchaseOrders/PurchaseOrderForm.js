@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebase';
-import { collection, addDoc, getDocs, Timestamp, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, Timestamp, query, where, orderBy, limit } from 'firebase/firestore';
 import logError from '../../utils/logError';
 import CreatePartModal from './CreatePartModal';
 import CreateAccessoryModal from './CreateAccessoryModal';
@@ -33,6 +33,8 @@ const categoryDisplayMap = {
   Game: "Game"
 };
 
+const CATALOG_LIMIT = 15;
+
 const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const [vendor, setVendor] = useState('');
   const [vendorOrderNumber, setVendorOrderNumber] = useState('');
@@ -45,72 +47,109 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const [tax, setTax] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Catalogs and error tracking
-  const [catalogs, setCatalogs] = useState({
-    Part: [],
-    Accessory: [],
-    Device: [],
-    Game: []
-  });
-  const [catalogErrors, setCatalogErrors] = useState({});
-
-  // For per-line search
+  // Per-line search terms, active dropdown idx, and async options
   const [searchTerms, setSearchTerms] = useState({});
+  const [debouncedSearchTerms, setDebouncedSearchTerms] = useState({});
+  const [dropdownActiveIdx, setDropdownActiveIdx] = useState({});
+  const [catalogOptions, setCatalogOptions] = useState({}); // { [lineIdx]: [options] }
+  const [catalogLoading, setCatalogLoading] = useState({}); // { [lineIdx]: bool }
+  const [catalogErrors, setCatalogErrors] = useState({}); // { [lineIdx]: errorMsg }
 
   // Modal state for "Add New"
   const [showCreateModal, setShowCreateModal] = useState({ open: false, category: null, lineIdx: null });
 
-  // Resilient catalog fetch
-  const fetchCatalog = async (col, groupId) => {
-    try {
-      const snap = await getDocs(query(collection(db, col), where('groupId', '==', groupId)));
-      return { data: snap.docs.map(doc => ({ id: doc.id, ...doc.data() })), error: null };
-    } catch (err) {
-      logError(`PurchaseOrderForm-LoadCatalogs-${col}`, err);
-      return { data: [], error: err.message || "Unknown error" };
-    }
-  };
+  // Keep a ref to the last fetched search to avoid race conditions
+  const latestFetchRef = useRef({});
 
-  // Fetch catalogs individually for resiliency
-  const fetchCatalogsResilient = async () => {
-    setCatalogErrors({});
+  // Debounce search terms for async fetch
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearchTerms(searchTerms), 200);
+    return () => clearTimeout(handler);
+  }, [searchTerms]);
+
+  // Async fetch catalog options for a line item
+  const fetchCatalogOptions = async (category, searchTerm, lineIdx) => {
     if (!userProfile?.groupId) return;
+    setCatalogLoading(prev => ({ ...prev, [lineIdx]: true }));
+    setCatalogErrors(prev => ({ ...prev, [lineIdx]: undefined }));
+    let col;
+    if (category === "Part") col = "parts";
+    else if (category === "Accessory") col = "accessories";
+    else if (category === "Device") col = "deviceTypes";
+    else if (category === "Game") col = "games";
+    else return;
 
-    const catDefs = [
-      { key: "Part", col: "parts" },
-      { key: "Accessory", col: "accessories" },
-      { key: "Device", col: "deviceTypes" },  // <-- Correct here!
-      { key: "Game", col: "games" }
-    ];
-
-    const results = await Promise.all(
-      catDefs.map(({ key, col }) => fetchCatalog(col, userProfile.groupId).then(res => ({ key, ...res })))
-    );
-
-    const newCatalogs = {};
-    const newErrors = {};
-    results.forEach(({ key, data, error }) => {
-      newCatalogs[key] = data;
-      if (error) newErrors[key] = error;
-    });
-
-    setCatalogs(newCatalogs);
-    setCatalogErrors(newErrors);
-    // Optionally notify user if some failed
-    if (Object.keys(newErrors).length > 0) {
-      showNotification(
-        "Some catalogs failed to load: " + Object.entries(newErrors).map(([k, v]) => `${k}: ${v}`).join("; "),
-        "warning"
+    // For text search, use Firestore range queries (prefix match)
+    let q;
+    const terms = (searchTerm || "").trim();
+    if (terms.length > 0) {
+      // Firestore can't do case-insensitive search or contains. Prefix match only.
+      // If using non-ASCII, consider normalizing.
+      q = query(
+        collection(db, col),
+        where('groupId', '==', userProfile.groupId),
+        orderBy('name'),
+        where('name', '>=', terms),
+        where('name', '<=', terms + '\uf8ff'),
+        limit(CATALOG_LIMIT)
+      );
+    } else {
+      q = query(
+        collection(db, col),
+        where('groupId', '==', userProfile.groupId),
+        orderBy('name'),
+        limit(CATALOG_LIMIT)
       );
     }
+
+    const thisFetchId = Math.random().toString(36).substr(2, 9);
+    latestFetchRef.current[lineIdx] = thisFetchId;
+    try {
+      const snap = await getDocs(q);
+      // Only set if this is the latest fetch for this line
+      if (latestFetchRef.current[lineIdx] === thisFetchId) {
+        setCatalogOptions(prev => ({
+          ...prev,
+          [lineIdx]: snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        }));
+        setCatalogErrors(prev => ({ ...prev, [lineIdx]: undefined }));
+      }
+    } catch (err) {
+      logError(`PurchaseOrderForm-AsyncCatalog-${col}`, err);
+      setCatalogOptions(prev => ({ ...prev, [lineIdx]: [] }));
+      setCatalogErrors(prev => ({ ...prev, [lineIdx]: err.message || "Unknown error" }));
+    } finally {
+      setCatalogLoading(prev => ({ ...prev, [lineIdx]: false }));
+    }
   };
 
+  // Refetch catalog options when debounced search or category changes
   useEffect(() => {
-    fetchCatalogsResilient();
+    lineItems.forEach((item, idx) => {
+      fetchCatalogOptions(item.category, debouncedSearchTerms[idx] || "", idx);
+    });
     // eslint-disable-next-line
-  }, []);
+  }, [debouncedSearchTerms, lineItems.map(i => i.category).join(",")]);
 
-  // Handle per-line search
+  // Keyboard navigation for dropdown
+  const dropdownRefs = useRef({});
+  const handleDropdownKeyDown = (idx, filteredCatalog, e) => {
+    let curIdx = dropdownActiveIdx[idx] ?? -1;
+    if (e.key === "ArrowDown") {
+      curIdx = Math.min(curIdx + 1, filteredCatalog.length - 1);
+      setDropdownActiveIdx(d => ({ ...d, [idx]: curIdx }));
+      e.preventDefault();
+    } else if (e.key === "ArrowUp") {
+      curIdx = Math.max(curIdx - 1, 0);
+      setDropdownActiveIdx(d => ({ ...d, [idx]: curIdx }));
+      e.preventDefault();
+    } else if (e.key === "Enter" && curIdx >= 0) {
+      handleLinkSelect(idx, filteredCatalog[curIdx].id);
+      setDropdownActiveIdx(d => ({ ...d, [idx]: -1 }));
+      e.preventDefault();
+    }
+  };
+
   const handleSearchChange = (idx, val) => {
     setSearchTerms(terms => ({ ...terms, [idx]: val }));
   };
@@ -187,11 +226,12 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     );
   };
 
-  // After creating a new catalog item, update catalogs & link it
+  // After creating a new catalog item, update and link it
   const handleCreatedCatalogItem = (category, newItem) => {
     setShowCreateModal({ open: false, category: null, lineIdx: null });
-    setCatalogs(cats => ({ ...cats, [category]: [...cats[category], newItem] }));
+    // Refetch for this line, and link
     if (showCreateModal.lineIdx !== null) {
+      fetchCatalogOptions(category, "", showCreateModal.lineIdx);
       setLineItems(items =>
         items.map((item, i) =>
           i === showCreateModal.lineIdx
@@ -206,7 +246,6 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    // Validate all line items are linked
     for (const li of lineItems) {
       if (!li.linkedId) {
         showNotification('All line items must be linked to a catalog item.', 'error');
@@ -227,7 +266,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
           ...li,
           unitPrice: li.unitPrice === '' ? 0 : Number(li.unitPrice),
           quantity: Number(li.quantity),
-          quantityReceived: 0 // always start at 0
+          quantityReceived: 0
         })),
         subtotal,
         shippingCost: shippingCost === '' ? 0 : Number(shippingCost),
@@ -255,27 +294,19 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     }
   };
 
-  // Helper to get the catalog list for a category and filter by search
-  const getFilteredCatalog = (category, searchTerm) => {
-    if (!catalogs[category]) return [];
-    return catalogs[category].filter(item =>
-      item.name && item.name.toLowerCase().includes((searchTerm || '').toLowerCase())
-    );
-  };
-
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-3xl relative">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-50" style={{ minHeight: "100vh" }}>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-7xl relative overflow-y-auto max-h-[98vh]">
         <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
-        <h2 className="text-xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">New Purchase Order</h2>
+        <h2 className="text-2xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">New Purchase Order</h2>
         <form onSubmit={handleSubmit}>
           {/* Vendor + Date Row */}
-          <div className="flex gap-4 mb-3">
+          <div className="flex flex-col md:flex-row gap-4 mb-3">
             <div className="flex-1">
               <label className="block font-medium mb-1">Vendor</label>
               <input type="text" className={inputClass} value={vendor} onChange={e => setVendor(e.target.value)} required />
             </div>
-            <div className="w-40">
+            <div className="w-full md:w-40">
               <label className="block font-medium mb-1">Date</label>
               <input type="date" className={inputClass} value={date} onChange={e => setDate(e.target.value)} required />
             </div>
@@ -293,7 +324,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
           {/* Line Items */}
           <div className="mb-3">
             <label className="block font-medium mb-2">Line Items</label>
-            <table className="min-w-full border rounded mb-2">
+            <table className="min-w-full border rounded mb-2 text-sm">
               <thead>
                 <tr>
                   <th className="px-2 py-1">Description</th>
@@ -309,8 +340,10 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                 {lineItems.map((item, idx) => {
                   const category = item.category;
                   const searchTerm = searchTerms[idx] || '';
-                  const filteredCatalog = getFilteredCatalog(category, searchTerm);
-                  const hasCatalogError = !!catalogErrors[category];
+                  const filteredCatalog = catalogOptions[idx] || [];
+                  const isLoading = catalogLoading[idx];
+                  const hasCatalogError = !!catalogErrors[idx];
+                  const activeIdx = dropdownActiveIdx[idx] ?? -1;
 
                   return (
                     <tr key={idx}>
@@ -347,9 +380,9 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                         </select>
                       </td>
                       <td>
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-1 relative">
                           {hasCatalogError ? (
-                            <div className="text-red-500 text-sm py-2">Failed to load {category} catalog.</div>
+                            <div className="text-red-500 text-sm py-2">Failed to load {category} catalog: {catalogErrors[idx]}</div>
                           ) : (
                             <>
                               <input
@@ -358,25 +391,42 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                                 placeholder={`Search ${categoryDisplayMap[category]}...`}
                                 value={searchTerm}
                                 onChange={e => handleSearchChange(idx, e.target.value)}
+                                onKeyDown={e => handleDropdownKeyDown(idx, filteredCatalog, e)}
+                                autoComplete="off"
                               />
-                              <select
-                                className={inputClass}
-                                value={item.linkedId || ''}
-                                onChange={e => handleLinkSelect(idx, e.target.value)}
-                                required
-                              >
-                                <option value="" disabled>
-                                  {filteredCatalog.length === 0 && searchTerm
-                                    ? "No matches"
-                                    : `Select ${categoryDisplayMap[category]}...`}
-                                </option>
-                                {filteredCatalog.map(catItem => (
-                                  <option key={catItem.id} value={catItem.id}>
-                                    {catItem.name}
+                              <div className="relative">
+                                <select
+                                  ref={el => (dropdownRefs.current[`${idx}`] = el)}
+                                  className={inputClass + " appearance-none"}
+                                  value={item.linkedId || ''}
+                                  onChange={e => handleLinkSelect(idx, e.target.value)}
+                                  required
+                                  size={Math.min(filteredCatalog.length + 2, 8)}
+                                  style={{ width: "100%" }}
+                                  onBlur={() => setDropdownActiveIdx(d => ({ ...d, [idx]: -1 }))}
+                                >
+                                  <option value="" disabled>
+                                    {isLoading
+                                      ? "Loading..."
+                                      : filteredCatalog.length === 0 && searchTerm
+                                        ? "No matches"
+                                        : `Select ${categoryDisplayMap[category]}...`}
                                   </option>
-                                ))}
-                                <option value="_create_new">+ Add New {categoryDisplayMap[category]}...</option>
-                              </select>
+                                  {filteredCatalog.map((catItem, i) => (
+                                    <option
+                                      key={catItem.id}
+                                      value={catItem.id}
+                                      style={{
+                                        background: activeIdx === i ? "#e0e7ff" : "",
+                                        color: activeIdx === i ? "#3730a3" : ""
+                                      }}
+                                    >
+                                      {catItem.name}
+                                    </option>
+                                  ))}
+                                  <option value="_create_new">+ Add New {categoryDisplayMap[category]}...</option>
+                                </select>
+                              </div>
                             </>
                           )}
                         </div>
@@ -397,7 +447,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
             <button type="button" className="text-indigo-600 hover:underline text-sm" onClick={handleAddLine}>+ Add Line Item</button>
           </div>
           {/* Shipping Cost & Other Fees */}
-          <div className="mb-3 flex flex-row gap-4">
+          <div className="mb-3 flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <label className="block font-medium mb-1">Shipping Cost</label>
               <div className={dollarInputWrapper}>
