@@ -31,13 +31,6 @@ function formatDate(dt) {
   return dt.toLocaleString();
 }
 
-const CATALOGS = [
-  { key: "Part", stateKey: "parts", collection: "parts" },
-  { key: "Accessory", stateKey: "accessories", collection: "accessories" },
-  { key: "Device", stateKey: "devices", collection: "deviceTypes" },
-  { key: "Game", stateKey: "games", collection: "games" }
-];
-
 const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const [editMode, setEditMode] = useState(false);
   const [formState, setFormState] = useState(() => ({
@@ -176,15 +169,6 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
           : item
       )
     }));
-  };
-
-  // To support legacy inventory/part creation modals (optional)
-  const handleCreateNew = (idx) => {
-    const cat = formState.lineItems[idx].category;
-    setPendingLineIndex(idx);
-    if (cat === 'Inventory') setShowCreateInventory(true);
-    else if (cat === 'Part') setShowCreatePart(true);
-    // Could be extended for other categories
   };
 
   const handleCreatedInventory = (newInv) => {
