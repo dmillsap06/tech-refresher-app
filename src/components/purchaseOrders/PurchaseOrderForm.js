@@ -2,10 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase';
 import { collection, addDoc, getDocs, Timestamp } from 'firebase/firestore';
 import logError from '../../utils/logError';
-import CreateInventoryModal from './CreateInventoryModal';
 import CreatePartModal from './CreatePartModal';
+import CreateAccessoryModal from './CreateAccessoryModal';
+import CreateDeviceModal from './CreateDeviceModal';
+import CreateGameModal from './CreateGameModal';
 
-const defaultLineItem = { description: '', quantity: 1, unitPrice: '', category: 'Inventory', notes: '', inventoryId: '', partId: '' };
+const defaultLineItem = {
+  description: '',
+  quantity: 1,
+  unitPrice: '',
+  category: 'Part',
+  linkedId: '',
+  notes: ''
+};
 
 const inputClass =
   "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
@@ -16,6 +25,27 @@ function formatMoney(val) {
   if (val === '' || isNaN(val)) return '';
   return Number(val).toFixed(2);
 }
+
+const categoryCatalogMap = {
+  Part: "parts",
+  Accessory: "accessories",
+  Device: "devices",
+  Game: "games"
+};
+
+const categoryModalMap = {
+  Part: CreatePartModal,
+  Accessory: CreateAccessoryModal,
+  Device: CreateDeviceModal,
+  Game: CreateGameModal
+};
+
+const categoryDisplayMap = {
+  Part: "Part",
+  Accessory: "Accessory",
+  Device: "Device",
+  Game: "Game"
+};
 
 const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const [vendor, setVendor] = useState('');
@@ -29,47 +59,67 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const [tax, setTax] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Inventory/Parts
-  const [inventory, setInventory] = useState([]);
-  const [parts, setParts] = useState([]);
-  const [showCreateInventory, setShowCreateInventory] = useState(false);
-  const [showCreatePart, setShowCreatePart] = useState(false);
-  const [pendingLineIndex, setPendingLineIndex] = useState(null);
+  // Catalogs
+  const [catalogs, setCatalogs] = useState({
+    Part: [],
+    Accessory: [],
+    Device: [],
+    Game: []
+  });
+  // For per-line search
+  const [searchTerms, setSearchTerms] = useState({});
+
+  // Modal state for "Add New"
+  const [showCreateModal, setShowCreateModal] = useState({ open: false, category: null, lineIdx: null });
+
+  // Fetch all catalogs on mount and after add-new
+  const fetchCatalogs = async () => {
+    try {
+      const [partSnap, accessorySnap, deviceSnap, gameSnap] = await Promise.all([
+        getDocs(collection(db, 'parts')),
+        getDocs(collection(db, 'accessories')),
+        getDocs(collection(db, 'devices')),
+        getDocs(collection(db, 'games')),
+      ]);
+      setCatalogs({
+        Part: partSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+        Accessory: accessorySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+        Device: deviceSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+        Game: gameSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+      });
+    } catch (err) {
+      logError('PurchaseOrderForm-LoadCatalogs', err);
+      showNotification('Failed to load catalogs: ' + err.message, 'error');
+    }
+  };
 
   useEffect(() => {
-    // Load inventory and parts for linking
-    const fetchItems = async () => {
-      try {
-        const invSnap = await getDocs(collection(db, 'inventory'));
-        setInventory(invSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        const partSnap = await getDocs(collection(db, 'parts'));
-        setParts(partSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (err) {
-        logError('PurchaseOrderForm-LoadInventoryParts', err);
-        showNotification('Failed to load inventory/parts: ' + err.message, 'error');
-      }
-    };
-    fetchItems();
-  }, [showCreateInventory, showCreatePart, showNotification]); // <--- fixed dependency
+    fetchCatalogs();
+    // eslint-disable-next-line
+  }, []);
+
+  // Handle per-line search
+  const handleSearchChange = (idx, val) => {
+    setSearchTerms(terms => ({ ...terms, [idx]: val }));
+  };
 
   const handleLineChange = (index, field, value) => {
     setLineItems(items => items.map((item, i) => i === index ? { ...item, [field]: value } : item));
   };
 
   const handleLineCategoryChange = (index, value) => {
-    // Reset link fields when switching category
     setLineItems(items =>
       items.map((item, i) =>
         i === index
           ? {
               ...item,
               category: value,
-              inventoryId: '',
-              partId: ''
+              linkedId: ''
             }
           : item
       )
     );
+    setSearchTerms(terms => ({ ...terms, [index]: '' }));
   };
 
   const handleAddLine = () => setLineItems(items => [...items, { ...defaultLineItem }]);
@@ -112,40 +162,33 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   };
 
   const handleLinkSelect = (idx, value) => {
+    if (value === "_create_new") {
+      setShowCreateModal({ open: true, category: lineItems[idx].category, lineIdx: idx });
+      return;
+    }
     setLineItems(items =>
       items.map((item, i) =>
         i === idx
-          ? item.category === 'Inventory'
-            ? { ...item, inventoryId: value, partId: '' }
-            : { ...item, partId: value, inventoryId: '' }
+          ? { ...item, linkedId: value }
           : item
       )
     );
   };
 
-  const handleCreateNew = (idx) => {
-    const cat = lineItems[idx].category;
-    setPendingLineIndex(idx);
-    if (cat === 'Inventory') setShowCreateInventory(true);
-    else setShowCreatePart(true);
-  };
-
-  // After creating a new inv/part, auto-link it to the pending line
-  const handleCreatedInventory = (newInv) => {
-    setShowCreateInventory(false);
-    if (pendingLineIndex !== null) {
-      handleLinkSelect(pendingLineIndex, newInv.id);
-      setPendingLineIndex(null);
+  // After creating a new catalog item, update catalogs & link it
+  const handleCreatedCatalogItem = (category, newItem) => {
+    setShowCreateModal({ open: false, category: null, lineIdx: null });
+    setCatalogs(cats => ({ ...cats, [category]: [...cats[category], newItem] }));
+    if (showCreateModal.lineIdx !== null) {
+      setLineItems(items =>
+        items.map((item, i) =>
+          i === showCreateModal.lineIdx
+            ? { ...item, linkedId: newItem.id }
+            : item
+        )
+      );
     }
-    setInventory(inv => [...inv, newInv]);
-  };
-  const handleCreatedPart = (newPart) => {
-    setShowCreatePart(false);
-    if (pendingLineIndex !== null) {
-      handleLinkSelect(pendingLineIndex, newPart.id);
-      setPendingLineIndex(null);
-    }
-    setParts(parts => [...parts, newPart]);
+    setSearchTerms(terms => ({ ...terms, [showCreateModal.lineIdx]: '' }));
   };
 
   const handleSubmit = async (e) => {
@@ -153,13 +196,8 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     setIsSaving(true);
     // Validate all line items are linked
     for (const li of lineItems) {
-      if (li.category === 'Inventory' && !li.inventoryId) {
-        showNotification('All inventory line items must be linked to an inventory item.', 'error');
-        setIsSaving(false);
-        return;
-      }
-      if (li.category === 'Part' && !li.partId) {
-        showNotification('All part line items must be linked to a part.', 'error');
+      if (!li.linkedId) {
+        showNotification('All line items must be linked to a catalog item.', 'error');
         setIsSaving(false);
         return;
       }
@@ -205,6 +243,14 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     }
   };
 
+  // Helper to get the catalog list for a category and filter by search
+  const getFilteredCatalog = (category, searchTerm) => {
+    if (!catalogs[category]) return [];
+    return catalogs[category].filter(item =>
+      item.name && item.name.toLowerCase().includes((searchTerm || '').toLowerCase())
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-3xl relative">
@@ -242,89 +288,91 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                   <th className="px-2 py-1">Qty</th>
                   <th className="px-2 py-1">Unit Price</th>
                   <th className="px-2 py-1">Category</th>
-                  <th className="px-2 py-1">Inventory/Part Link</th>
+                  <th className="px-2 py-1">Link</th>
                   <th className="px-2 py-1">Notes</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {lineItems.map((item, idx) => (
-                  <tr key={idx}>
-                    <td>
-                      <input type="text" className={inputClass} value={item.description} onChange={e => handleLineChange(idx, 'description', e.target.value)} required />
-                    </td>
-                    <td>
-                      <input type="number" className={inputClass} value={item.quantity} min={1} style={{ width: 60 }} onChange={e => handleLineChange(idx, 'quantity', e.target.value)} required />
-                    </td>
-                    <td>
-                      <div className={dollarInputWrapper}>
-                        <span className={dollarPrefix}>$</span>
-                        <input
-                          type="text"
-                          className={inputClass + " pl-6"}
-                          value={item.unitPrice}
-                          min={0}
-                          step="0.01"
-                          style={{ width: 90 }}
-                          onChange={handleLineDollarChange(idx, 'unitPrice')}
-                          onBlur={handleLineDollarBlur(idx, 'unitPrice')}
-                          required
-                          inputMode="decimal"
-                          pattern="^\d+(\.\d{1,2})?$"
-                        />
-                      </div>
-                    </td>
-                    <td>
-                      <select className={inputClass} value={item.category} onChange={e => handleLineCategoryChange(idx, e.target.value)}>
-                        <option value="Inventory">Inventory</option>
-                        <option value="Part">Part</option>
-                      </select>
-                    </td>
-                    <td>
-                      {item.category === 'Inventory' ? (
-                        <div className="flex items-center gap-1">
+                {lineItems.map((item, idx) => {
+                  const category = item.category;
+                  const searchTerm = searchTerms[idx] || '';
+                  const filteredCatalog = getFilteredCatalog(category, searchTerm);
+
+                  return (
+                    <tr key={idx}>
+                      <td>
+                        <input type="text" className={inputClass} value={item.description} onChange={e => handleLineChange(idx, 'description', e.target.value)} required />
+                      </td>
+                      <td>
+                        <input type="number" className={inputClass} value={item.quantity} min={1} style={{ width: 60 }} onChange={e => handleLineChange(idx, 'quantity', e.target.value)} required />
+                      </td>
+                      <td>
+                        <div className={dollarInputWrapper}>
+                          <span className={dollarPrefix}>$</span>
+                          <input
+                            type="text"
+                            className={inputClass + " pl-6"}
+                            value={item.unitPrice}
+                            min={0}
+                            step="0.01"
+                            style={{ width: 90 }}
+                            onChange={handleLineDollarChange(idx, 'unitPrice')}
+                            onBlur={handleLineDollarBlur(idx, 'unitPrice')}
+                            required
+                            inputMode="decimal"
+                            pattern="^\d+(\.\d{1,2})?$"
+                          />
+                        </div>
+                      </td>
+                      <td>
+                        <select className={inputClass} value={item.category} onChange={e => handleLineCategoryChange(idx, e.target.value)}>
+                          <option value="Part">Part</option>
+                          <option value="Accessory">Accessory</option>
+                          <option value="Device">Device</option>
+                          <option value="Game">Game</option>
+                        </select>
+                      </td>
+                      <td>
+                        <div className="flex flex-col gap-1">
+                          <input
+                            type="text"
+                            className={inputClass + " mb-1"}
+                            placeholder={`Search ${categoryDisplayMap[category]}...`}
+                            value={searchTerm}
+                            onChange={e => handleSearchChange(idx, e.target.value)}
+                          />
                           <select
                             className={inputClass}
-                            value={item.inventoryId || ''}
+                            value={item.linkedId || ''}
                             onChange={e => handleLinkSelect(idx, e.target.value)}
                             required
                           >
-                            <option value="" disabled>Select Inventory...</option>
-                            {inventory.map(inv => (
-                              <option key={inv.id} value={inv.id}>{inv.name || inv.id}</option>
+                            <option value="" disabled>
+                              {filteredCatalog.length === 0 && searchTerm
+                                ? "No matches"
+                                : `Select ${categoryDisplayMap[category]}...`}
+                            </option>
+                            {filteredCatalog.map(catItem => (
+                              <option key={catItem.id} value={catItem.id}>
+                                {catItem.name}
+                              </option>
                             ))}
-                            <option value="_create_new">+ Create New...</option>
+                            <option value="_create_new">+ Add New {categoryDisplayMap[category]}...</option>
                           </select>
-                          {item.inventoryId === '_create_new' && handleCreateNew(idx)}
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <select
-                            className={inputClass}
-                            value={item.partId || ''}
-                            onChange={e => handleLinkSelect(idx, e.target.value)}
-                            required
-                          >
-                            <option value="" disabled>Select Part...</option>
-                            {parts.map(part => (
-                              <option key={part.id} value={part.id}>{part.name || part.id}</option>
-                            ))}
-                            <option value="_create_new">+ Create New...</option>
-                          </select>
-                          {item.partId === '_create_new' && handleCreateNew(idx)}
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <input type="text" className={inputClass} value={item.notes} onChange={e => handleLineChange(idx, 'notes', e.target.value)} />
-                    </td>
-                    <td>
-                      {lineItems.length > 1 && (
-                        <button type="button" className="text-red-500 text-lg px-2" onClick={() => handleRemoveLine(idx)} title="Remove">×</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>
+                        <input type="text" className={inputClass} value={item.notes} onChange={e => handleLineChange(idx, 'notes', e.target.value)} />
+                      </td>
+                      <td>
+                        {lineItems.length > 1 && (
+                          <button type="button" className="text-red-500 text-lg px-2" onClick={() => handleRemoveLine(idx)} title="Remove">×</button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             <button type="button" className="text-indigo-600 hover:underline text-sm" onClick={handleAddLine}>+ Add Line Item</button>
@@ -402,19 +450,36 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
             </button>
           </div>
         </form>
-        {showCreateInventory && (
-          <CreateInventoryModal
+        {/* Add New Modals */}
+        {showCreateModal.open && showCreateModal.category === "Part" && (
+          <CreatePartModal
             userProfile={userProfile}
-            onCreated={handleCreatedInventory}
-            onClose={() => setShowCreateInventory(false)}
+            onCreated={item => handleCreatedCatalogItem("Part", item)}
+            onClose={() => setShowCreateModal({ open: false, category: null, lineIdx: null })}
             showNotification={showNotification}
           />
         )}
-        {showCreatePart && (
-          <CreatePartModal
+        {showCreateModal.open && showCreateModal.category === "Accessory" && (
+          <CreateAccessoryModal
             userProfile={userProfile}
-            onCreated={handleCreatedPart}
-            onClose={() => setShowCreatePart(false)}
+            onCreated={item => handleCreatedCatalogItem("Accessory", item)}
+            onClose={() => setShowCreateModal({ open: false, category: null, lineIdx: null })}
+            showNotification={showNotification}
+          />
+        )}
+        {showCreateModal.open && showCreateModal.category === "Device" && (
+          <CreateDeviceModal
+            userProfile={userProfile}
+            onCreated={item => handleCreatedCatalogItem("Device", item)}
+            onClose={() => setShowCreateModal({ open: false, category: null, lineIdx: null })}
+            showNotification={showNotification}
+          />
+        )}
+        {showCreateModal.open && showCreateModal.category === "Game" && (
+          <CreateGameModal
+            userProfile={userProfile}
+            onCreated={item => handleCreatedCatalogItem("Game", item)}
+            onClose={() => setShowCreateModal({ open: false, category: null, lineIdx: null })}
             showNotification={showNotification}
           />
         )}
