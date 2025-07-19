@@ -301,11 +301,10 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
             <label className="block font-medium mb-1">Notes</label>
             <textarea className={inputClass} value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Add notes or explain 'Other Fees' here..." />
           </div>
-          {/* Line Items */}
+          {/* Line Items Table */}
           <div className="mb-3 flex-1 flex flex-col min-h-0">
             <label className="block font-medium mb-2">Line Items</label>
-            {/* Make table scrollable */}
-            <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: '40vh' }}>
               <table className="min-w-full border rounded mb-2 text-sm">
                 <thead>
                   <tr>
