@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AuthPage from './components/auth/AuthPage';
 import Dashboard from './components/Dashboard';
 import InventoryPage from './components/inventory/InventoryPage';
-import Settings from './components/Settings';
+import Settings from './components/Settings/Settings';
 import PartsPage from './components/parts/PartsPage';
 import ArchivedInventory from './components/ArchivedInventory';
 import OrdersPage from './components/orders/OrdersPage';
