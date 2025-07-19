@@ -98,10 +98,86 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   );
   const total = subtotal + Number(formState.tax || 0) + Number(formState.shippingCost || 0) + Number(formState.otherFees || 0);
 
-  // Update/Remove/Add lines as before (not shown for brevity)
-  // ... (handleLineChange, handleAddLine, etc. unchanged)
+  // ----------- REQUIRED HANDLERS -----------
+  const handleLineChange = (index, field, value) => {
+    setFormState(state => ({
+      ...state,
+      lineItems: state.lineItems.map((item, i) =>
+        i === index ? { ...item, [field]: value } : item
+      )
+    }));
+  };
 
-  // --- All other editing, linking, and saving logic unchanged ---
+  const handleLineCategoryChange = (index, value) => {
+    setFormState(state => ({
+      ...state,
+      lineItems: state.lineItems.map((item, i) =>
+        i === index
+          ? { ...item, category: value, linkedId: '' }
+          : item
+      )
+    }));
+  };
+
+  const handleRemoveLine = (idx) => {
+    setFormState(state => ({
+      ...state,
+      lineItems: state.lineItems.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const handleAddLine = () => {
+    setFormState(state => ({
+      ...state,
+      lineItems: [
+        ...state.lineItems,
+        { description: '', quantity: 1, unitPrice: '', category: 'Part', linkedId: '', quantityReceived: 0 }
+      ]
+    }));
+  };
+
+  const saveEdits = async () => {
+    setSaving(true);
+    errorReported.current = false;
+    for (const li of formState.lineItems) {
+      if (!li.linkedId) {
+        showNotification('All line items must be linked to a catalog item.', 'error');
+        setSaving(false);
+        return;
+      }
+    }
+    try {
+      await updateDoc(doc(db, 'purchase_orders', po.id), {
+        vendor: formState.vendor,
+        vendorOrderNumber: formState.vendorOrderNumber,
+        date: new Date(formState.date),
+        notes: formState.notes,
+        lineItems: formState.lineItems.map(li => ({
+          ...li,
+          unitPrice: li.unitPrice === '' ? 0 : Number(li.unitPrice),
+          quantity: Number(li.quantity),
+          quantityReceived: typeof li.quantityReceived === 'number' ? li.quantityReceived : 0,
+        })),
+        shippingCost: formState.shippingCost === '' ? 0 : Number(formState.shippingCost),
+        otherFees: formState.otherFees === '' ? 0 : Number(formState.otherFees),
+        tax: formState.tax === '' ? 0 : Number(formState.tax),
+        status: formState.status,
+        subtotal,
+        total,
+        updatedAt: new Date(),
+      });
+      showNotification('PO updated!', 'success');
+      setEditMode(false);
+    } catch (err) {
+      if (!errorReported.current) {
+        logError('PODetailModal-Update', err);
+        showNotification('Failed to update PO: ' + err.message, 'error');
+        errorReported.current = true;
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Catalog lookup for display
   const getLinkedDisplay = (item) => {
@@ -124,6 +200,27 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
       default: return [];
     }
   };
+
+  // For POReceiveModal and CreateInventoryModal and CreatePartModal
+  const handleCreatedInventory = (newInv) => {
+    setShowCreateInventory(false);
+    if (pendingLineIndex !== null) {
+      handleLineChange(pendingLineIndex, 'linkedId', newInv.id);
+      setPendingLineIndex(null);
+    }
+    // Add to local state if needed
+  };
+  const handleCreatedPart = (newPart) => {
+    setShowCreatePart(false);
+    if (pendingLineIndex !== null) {
+      handleLineChange(pendingLineIndex, 'linkedId', newPart.id);
+      setPendingLineIndex(null);
+    }
+    setParts(parts => [...parts, newPart]);
+  };
+
+  // Status history
+  const statusHistory = po.statusHistory || [];
 
   const badge = (() => {
     const { color, emoji, label } = statusInfo[formState.status] || { color: "bg-gray-200 text-gray-600", emoji: "❓", label: formState.status };
