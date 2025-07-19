@@ -19,6 +19,7 @@ const CatalogGames = ({ userProfile, showNotification }) => {
   const [deviceTypes, setDeviceTypes] = useState([]);
   const [brands, setBrands] = useState([]);
   const [newGame, setNewGame] = useState('');
+  const [originalDeviceType, setOriginalDeviceType] = useState('');
   const [selectedDeviceTypes, setSelectedDeviceTypes] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -99,15 +100,23 @@ const CatalogGames = ({ userProfile, showNotification }) => {
     return () => unsubscribe();
   }, [userProfile?.groupId]);
 
-  // Helper to get device type object by ID
+  // Helpers
   const getDeviceType = (deviceTypeId) => {
     return deviceTypes.find((dt) => dt.id === deviceTypeId);
   };
-
-  // Helper to get brand name by brandId
   const getBrandName = (brandId) => {
     const brand = brands.find((b) => b.id === brandId);
     return brand ? brand.name : 'Unknown Brand';
+  };
+
+  // Handle single-select change for original device type
+  const handleOriginalDeviceTypeChange = (e) => {
+    const value = e.target.value;
+    setOriginalDeviceType(value);
+    // Optionally: auto-add to compatible types if not present
+    if (value && !selectedDeviceTypes.includes(value)) {
+      setSelectedDeviceTypes((prev) => [...prev, value]);
+    }
   };
 
   // Handle multi-select change
@@ -123,27 +132,39 @@ const CatalogGames = ({ userProfile, showNotification }) => {
       showNotification('Game name cannot be empty.', 'error');
       return;
     }
-    if (!selectedDeviceTypes.length) {
-      showNotification('Please select at least one device type.', 'error');
+    if (!originalDeviceType) {
+      showNotification('Please select an original device type.', 'error');
       return;
+    }
+    if (!selectedDeviceTypes.length) {
+      showNotification('Please select at least one compatible device type.', 'error');
+      return;
+    }
+    // Ensure original device type is in compatible device types
+    let compatible = selectedDeviceTypes;
+    if (!compatible.includes(originalDeviceType)) {
+      compatible = [...compatible, originalDeviceType];
     }
     try {
       if (editingId) {
         await updateDoc(doc(db, 'games', editingId), {
           name: newGame.trim(),
-          deviceTypeIds: selectedDeviceTypes,
+          originalDeviceTypeId: originalDeviceType,
+          deviceTypeIds: compatible,
         });
         showNotification('Game updated!', 'success');
       } else {
         await addDoc(collection(db, 'games'), {
           name: newGame.trim(),
-          deviceTypeIds: selectedDeviceTypes,
+          originalDeviceTypeId: originalDeviceType,
+          deviceTypeIds: compatible,
           groupId: userProfile.groupId,
           createdAt: new Date(),
         });
         showNotification('Game added!', 'success');
       }
       setNewGame('');
+      setOriginalDeviceType('');
       setSelectedDeviceTypes([]);
       setEditingId(null);
     } catch (error) {
@@ -167,6 +188,7 @@ const CatalogGames = ({ userProfile, showNotification }) => {
   // Start editing
   const handleEdit = (game) => {
     setNewGame(game.name);
+    setOriginalDeviceType(game.originalDeviceTypeId || '');
     setSelectedDeviceTypes(game.deviceTypeIds || []);
     setEditingId(game.id);
   };
@@ -174,6 +196,7 @@ const CatalogGames = ({ userProfile, showNotification }) => {
   // Cancel editing
   const handleCancelEdit = () => {
     setNewGame('');
+    setOriginalDeviceType('');
     setSelectedDeviceTypes([]);
     setEditingId(null);
   };
@@ -209,6 +232,29 @@ const CatalogGames = ({ userProfile, showNotification }) => {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+            Original Device Type
+          </label>
+          <select
+            value={originalDeviceType}
+            onChange={handleOriginalDeviceTypeChange}
+            className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-500 shadow-sm transition"
+            required
+            disabled={deviceTypesLoading || deviceTypes.length === 0}
+          >
+            <option value="">Select original device type...</option>
+            {deviceTypes.map((dt) => {
+              const brand = brands.find(b => b.id === dt.brandId);
+              return (
+                <option value={dt.id} key={dt.id}>
+                  {dt.name}
+                  {brand ? ` (${brand.name})` : ''}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
             Compatible Device Types
           </label>
           <select
@@ -236,7 +282,7 @@ const CatalogGames = ({ userProfile, showNotification }) => {
               );
             })}
           </select>
-          <div className="text-xs text-gray-500 mt-1">Ctrl-Click to select multiple</div>
+          <div className="text-xs text-gray-500 mt-1">Ctrl/Cmd+click to select multiple</div>
         </div>
       </form>
       <div className="rounded-xl bg-gray-50 dark:bg-gray-800 shadow p-4">
@@ -251,7 +297,16 @@ const CatalogGames = ({ userProfile, showNotification }) => {
                 <span className="flex flex-col">
                   <span className="font-medium text-gray-800 dark:text-gray-200">{game.name}</span>
                   <span className="text-xs text-gray-600 dark:text-gray-400">
-                    {Array.isArray(game.deviceTypeIds) && game.deviceTypeIds.length
+                    Original: {(() => {
+                      const dt = getDeviceType(game.originalDeviceTypeId);
+                      const brand = dt ? getBrandName(dt.brandId) : null;
+                      return dt
+                        ? `${dt.name}${brand ? ` (${brand})` : ''}`
+                        : 'Unknown Device Type';
+                    })()}
+                  </span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    Compatible: {Array.isArray(game.deviceTypeIds) && game.deviceTypeIds.length
                       ? game.deviceTypeIds.map(dtId => {
                           const dt = getDeviceType(dtId);
                           const brand = dt ? getBrandName(dt.brandId) : null;
