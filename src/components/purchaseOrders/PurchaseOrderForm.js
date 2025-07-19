@@ -50,7 +50,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
       }
     };
     fetchItems();
-  }, [showCreateInventory, showCreatePart]); // reload after new created
+  }, [showCreateInventory, showCreatePart, showNotification]); // <--- fixed dependency
 
   const handleLineChange = (index, field, value) => {
     setLineItems(items => items.map((item, i) => i === index ? { ...item, [field]: value } : item));

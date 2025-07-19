@@ -22,15 +22,6 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
   const [saving, setSaving] = useState(false);
   const errorReported = useRef(false);
 
-  // Helper: Show linked display name/id
-  const getLinkedDisplay = (item) => {
-    if (item.category === 'Inventory' && item.inventoryName) return item.inventoryName;
-    if (item.category === 'Part' && item.partName) return item.partName;
-    if (item.category === 'Inventory' && item.inventoryId) return item.inventoryId;
-    if (item.category === 'Part' && item.partId) return item.partId;
-    return '';
-  };
-
   // Block receive if any line item cannot be matched (enforced)
   const allLinked = po.lineItems.every(
     li =>
