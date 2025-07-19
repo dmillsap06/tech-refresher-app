@@ -21,7 +21,8 @@ const statusInfo = {
   "Cancelled": { color: "bg-gray-200 text-gray-500", emoji: "❌", label: "Cancelled" },
   "Paid":      { color: "bg-indigo-100 text-indigo-700", emoji: "💸", label: "Paid" },
   "Shipped":   { color: "bg-blue-100 text-blue-700", emoji: "🚚", label: "Shipped" },
-  "Partially Shipped": { color: "bg-yellow-100 text-yellow-800", emoji: "📦", label: "Partial Ship" }
+  "Partially Shipped": { color: "bg-yellow-100 text-yellow-800", emoji: "📦", label: "Partial Ship" },
+  "Archived":  { color: "bg-gray-200 text-gray-600", emoji: "📁", label: "Archived" }
 };
 
 function formatMoney(val) {
@@ -78,7 +79,6 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const [showCreatePart, setShowCreatePart] = useState(false);
   const [pendingLineIndex, setPendingLineIndex] = useState(null);
 
-  // Payment methods for paid modal
   const { methods: paymentMethods } = usePaymentMethods(userProfile.groupId);
 
   useEffect(() => {
@@ -101,17 +101,17 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
 
   const errorReported = useRef(false);
 
-  const canEdit = formState.status === 'Created' && userProfile.groupId === po.groupId;
-  const canReceive = (po.status === 'Created' || po.status === 'Partially Received');
-  const canMarkPaid = po.status !== 'Cancelled';
-  const canMarkShipped = po.status !== 'Cancelled' && po.status !== 'Received';
+  // Button display logic
+  const canMarkPaid = formState.status === 'Created';
+  const canMarkShipped = formState.status === 'Paid';
+  const canReceive = formState.status === 'Shipped' || formState.status === 'Partially Shipped';
+  const canComplete = formState.status === 'Received';
+  // archive = status "Archived" (hidden from active)
 
   const subtotal = formState.lineItems.reduce(
     (sum, li) => sum + (Number(li.quantity) * Number(li.unitPrice || 0)), 0
   );
   const total = subtotal + Number(formState.tax || 0) + Number(formState.shippingCost || 0) + Number(formState.otherFees || 0);
-
-  // ---- HANDLER FUNCTIONS ----
 
   const handleLineChange = (index, field, value) => {
     setFormState(state => ({
@@ -191,6 +191,25 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
       }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCompleteWorkOrder = async () => {
+    try {
+      await updateDoc(doc(db, 'purchase_orders', po.id), {
+        status: 'Archived',
+        archivedAt: new Date(),
+        statusHistory: arrayUnion({
+          status: 'Archived',
+          by: userProfile.displayName || userProfile.email,
+          at: new Date().toISOString(),
+          note: 'Work order completed and archived'
+        })
+      });
+      showNotification('Work order archived!', 'success');
+      onClose();
+    } catch (err) {
+      showNotification('Failed to archive work order: ' + err.message, 'error');
     }
   };
 
@@ -644,36 +663,44 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
           <div className="mb-6">
             <label className="block font-medium mb-1">Payment History</label>
             <PaymentHistory />
-            {canMarkPaid && (
-              <button
-                className="mt-4 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700"
-                onClick={() => setShowMarkPaid(true)}
-              >
-                Mark as Paid
-              </button>
-            )}
           </div>
           {/* Shipment History */}
           <div className="mb-6">
             <label className="block font-medium mb-1">Shipment History</label>
             <ShipmentHistory />
-            {canMarkShipped && (
-              <button
-                className="mt-4 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-                onClick={() => setShowMarkShipped(true)}
-              >
-                Mark as Shipped
-              </button>
-            )}
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-5">
+          {canMarkPaid && (
+            <button
+              className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700"
+              onClick={() => setShowMarkPaid(true)}
+            >
+              Mark as Paid
+            </button>
+          )}
+          {canMarkShipped && (
+            <button
+              className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => setShowMarkShipped(true)}
+            >
+              Mark as Shipped
+            </button>
+          )}
           {canReceive && (
             <button
-              type="button"
-              className="px-5 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700"
+              className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
               onClick={() => setShowReceiveModal(true)}
-            >Receive
+            >
+              Receive
+            </button>
+          )}
+          {canComplete && (
+            <button
+              className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-900"
+              onClick={handleCompleteWorkOrder}
+            >
+              Complete Work Order
             </button>
           )}
           {editMode ? (
