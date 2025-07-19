@@ -26,20 +26,6 @@ function formatMoney(val) {
   return Number(val).toFixed(2);
 }
 
-const categoryCatalogMap = {
-  Part: "parts",
-  Accessory: "accessories",
-  Device: "devices",
-  Game: "games"
-};
-
-const categoryModalMap = {
-  Part: CreatePartModal,
-  Accessory: CreateAccessoryModal,
-  Device: CreateDeviceModal,
-  Game: CreateGameModal
-};
-
 const categoryDisplayMap = {
   Part: "Part",
   Accessory: "Accessory",
