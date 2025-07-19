@@ -6,11 +6,30 @@ import logError from '../../utils/logError';
 const inputClass =
   "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
 
-function getRemaining(li) {
+// Helper to get max receivable for a line item, considering shipments
+function getMaxReceivable(li, po) {
+  const totalShipped = getTotalShipped(li, po);
   return Math.max(
     0,
-    Number(li.quantity || 0) - Number(li.quantityReceived || 0)
+    Math.min(
+      Number(li.quantity || 0),
+      totalShipped
+    ) - Number(li.quantityReceived || 0)
   );
+}
+
+// Helper: total shipped for this line item
+function getTotalShipped(li, po) {
+  return (po.shipments || [])
+    .reduce((sum, s) =>
+      sum + (s.shippedLineItems || [])
+        .filter(sli =>
+          (sli.id && li.id && sli.id === li.id) ||
+          (sli.linkedId && li.linkedId && sli.linkedId === li.linkedId) ||
+          (sli.description && sli.description === li.description)
+        )
+        .reduce((s2, sli) => s2 + Number(sli.shipped || 0), 0)
+    , 0);
 }
 
 // Helper to display linked catalog item name (for table)
@@ -39,7 +58,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
   const [step, setStep] = useState('ask-partial');
   const [receiveAll, setReceiveAll] = useState(true);
   const [quantities, setQuantities] = useState(() =>
-    po.lineItems.map(li => getRemaining(li))
+    po.lineItems.map(li => getMaxReceivable(li, po))
   );
   const [saving, setSaving] = useState(false);
   const [linkedNames, setLinkedNames] = useState([]); // for table display
@@ -81,7 +100,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
 
   // Step 1: Ask if they want to receive all or partial
   if (step === 'ask-partial') {
-    const canFullyReceive = po.lineItems.every(li => getRemaining(li) > 0);
+    const canFullyReceive = po.lineItems.every(li => getMaxReceivable(li, po) > 0);
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-lg relative">
@@ -94,7 +113,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
               onClick={() => {
                 setReceiveAll(true);
                 setStep('enter-qty');
-                setQuantities(po.lineItems.map(li => getRemaining(li)));
+                setQuantities(po.lineItems.map(li => getMaxReceivable(li, po)));
               }}
               disabled={!canFullyReceive}
             >
@@ -120,7 +139,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
   const handleQtyChange = idx => e => {
     let val = e.target.value.replace(/[^0-9]/g, '');
     if (val === '') val = '';
-    else val = Math.max(0, Math.min(Number(val), getRemaining(po.lineItems[idx])));
+    else val = Math.max(0, Math.min(Number(val), getMaxReceivable(po.lineItems[idx], po)));
     setQuantities(qs => qs.map((q, i) => i === idx ? val : q));
   };
 
@@ -131,7 +150,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
       const newLineItems = po.lineItems.map((li, idx) => {
         let qtyToReceive = Number(quantities[idx] || 0);
         if (qtyToReceive < 0) qtyToReceive = 0;
-        if (qtyToReceive > getRemaining(li)) qtyToReceive = getRemaining(li);
+        if (qtyToReceive > getMaxReceivable(li, po)) qtyToReceive = getMaxReceivable(li, po);
         return {
           ...li,
           quantityReceived: Number(li.quantityReceived || 0) + qtyToReceive
@@ -183,7 +202,6 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
             case 'Game': col = 'games'; break;
             default: break;
           }
-          // If you want to increment stock for all, do so here
           if (col) {
             await updateDoc(doc(db, col, li.linkedId), {
               stock: increment(qty),
@@ -229,6 +247,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
             <tr>
               <th className="px-2 py-1">Description</th>
               <th className="px-2 py-1 text-center">Ordered</th>
+              <th className="px-2 py-1 text-center">Shipped</th>
               <th className="px-2 py-1 text-center">Prev. Received</th>
               <th className="px-2 py-1 text-center">Receive Now</th>
               <th className="px-2 py-1">Linked Catalog Item</th>
@@ -236,11 +255,13 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
           </thead>
           <tbody>
             {po.lineItems.map((li, idx) => {
-              const remaining = getRemaining(li);
+              const maxReceivable = getMaxReceivable(li, po);
+              const totalShipped = getTotalShipped(li, po);
               return (
                 <tr key={idx}>
                   <td>{li.description}</td>
                   <td className="text-center">{li.quantity}</td>
+                  <td className="text-center">{totalShipped}</td>
                   <td className="text-center">{li.quantityReceived || 0}</td>
                   <td className="text-center">
                     {receiveAll ? (
@@ -249,7 +270,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
                         className={inputClass + " w-24 text-center"}
                         value={quantities[idx]}
                         min={0}
-                        max={remaining}
+                        max={maxReceivable}
                         disabled
                       />
                     ) : (
@@ -258,9 +279,9 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
                         className={inputClass + " w-24 text-center"}
                         value={quantities[idx]}
                         min={0}
-                        max={remaining}
+                        max={maxReceivable}
                         onChange={handleQtyChange(idx)}
-                        placeholder={`Max: ${remaining}`}
+                        placeholder={`Max: ${maxReceivable}`}
                         inputMode="numeric"
                         pattern="[0-9]*"
                       />
