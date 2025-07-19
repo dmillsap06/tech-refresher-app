@@ -12,12 +12,13 @@ const defaultLineItem = {
   quantity: 1,
   unitPrice: '',
   category: 'Part',
-  linkedId: '',
-  notes: ''
+  linkedId: ''
 };
 
 const inputClass =
   "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
+const inputCenterClass =
+  inputClass + " text-center";
 const dollarInputWrapper = "relative";
 const dollarPrefix = "absolute left-2 inset-y-0 flex items-center text-gray-400 pointer-events-none";
 
@@ -83,8 +84,6 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     let q;
     const terms = (searchTerm || "").trim();
     if (terms.length > 0) {
-      // Firestore can't do case-insensitive search or contains. Prefix match only.
-      // If using non-ASCII, consider normalizing.
       q = query(
         collection(db, col),
         where('groupId', '==', userProfile.groupId),
@@ -106,7 +105,6 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     latestFetchRef.current[lineIdx] = thisFetchId;
     try {
       const snap = await getDocs(q);
-      // Only set if this is the latest fetch for this line
       if (latestFetchRef.current[lineIdx] === thisFetchId) {
         setCatalogOptions(prev => ({
           ...prev,
@@ -229,7 +227,6 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   // After creating a new catalog item, update and link it
   const handleCreatedCatalogItem = (category, newItem) => {
     setShowCreateModal({ open: false, category: null, lineIdx: null });
-    // Refetch for this line, and link
     if (showCreateModal.lineIdx !== null) {
       fetchCatalogOptions(category, "", showCreateModal.lineIdx);
       setLineItems(items =>
@@ -296,10 +293,10 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-50" style={{ minHeight: "100vh" }}>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-7xl relative overflow-y-auto max-h-[98vh]">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-7xl relative flex flex-col h-[98vh]">
         <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
         <h2 className="text-2xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">New Purchase Order</h2>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           {/* Vendor + Date Row */}
           <div className="flex flex-col md:flex-row gap-4 mb-3">
             <div className="flex-1">
@@ -322,128 +319,126 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
             <textarea className={inputClass} value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Add notes or explain 'Other Fees' here..." />
           </div>
           {/* Line Items */}
-          <div className="mb-3">
+          <div className="mb-3 flex-1 flex flex-col min-h-0">
             <label className="block font-medium mb-2">Line Items</label>
-            <table className="min-w-full border rounded mb-2 text-sm">
-              <thead>
-                <tr>
-                  <th className="px-2 py-1">Description</th>
-                  <th className="px-2 py-1">Qty</th>
-                  <th className="px-2 py-1">Unit Price</th>
-                  <th className="px-2 py-1">Category</th>
-                  <th className="px-2 py-1">Link</th>
-                  <th className="px-2 py-1">Notes</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {lineItems.map((item, idx) => {
-                  const category = item.category;
-                  const searchTerm = searchTerms[idx] || '';
-                  const filteredCatalog = catalogOptions[idx] || [];
-                  const isLoading = catalogLoading[idx];
-                  const hasCatalogError = !!catalogErrors[idx];
-                  const activeIdx = dropdownActiveIdx[idx] ?? -1;
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <table className="min-w-full border rounded mb-2 text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-2 py-1 text-center">Description</th>
+                    <th className="px-2 py-1 text-center">Qty</th>
+                    <th className="px-2 py-1 text-center">Unit Price</th>
+                    <th className="px-2 py-1 text-center">Category</th>
+                    <th className="px-2 py-1 text-center">Link</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {lineItems.map((item, idx) => {
+                    const category = item.category;
+                    const searchTerm = searchTerms[idx] || '';
+                    const filteredCatalog = catalogOptions[idx] || [];
+                    const isLoading = catalogLoading[idx];
+                    const hasCatalogError = !!catalogErrors[idx];
+                    const activeIdx = dropdownActiveIdx[idx] ?? -1;
 
-                  return (
-                    <tr key={idx}>
-                      <td>
-                        <input type="text" className={inputClass} value={item.description} onChange={e => handleLineChange(idx, 'description', e.target.value)} required />
-                      </td>
-                      <td>
-                        <input type="number" className={inputClass} value={item.quantity} min={1} style={{ width: 60 }} onChange={e => handleLineChange(idx, 'quantity', e.target.value)} required />
-                      </td>
-                      <td>
-                        <div className={dollarInputWrapper}>
-                          <span className={dollarPrefix}>$</span>
-                          <input
-                            type="text"
-                            className={inputClass + " pl-6"}
-                            value={item.unitPrice}
-                            min={0}
-                            step="0.01"
-                            style={{ width: 90 }}
-                            onChange={handleLineDollarChange(idx, 'unitPrice')}
-                            onBlur={handleLineDollarBlur(idx, 'unitPrice')}
-                            required
-                            inputMode="decimal"
-                            pattern="^\d+(\.\d{1,2})?$"
-                          />
-                        </div>
-                      </td>
-                      <td>
-                        <select className={inputClass} value={item.category} onChange={e => handleLineCategoryChange(idx, e.target.value)}>
-                          <option value="Part">Part</option>
-                          <option value="Accessory">Accessory</option>
-                          <option value="Device">Device</option>
-                          <option value="Game">Game</option>
-                        </select>
-                      </td>
-                      <td>
-                        <div className="flex flex-col gap-1 relative">
-                          {hasCatalogError ? (
-                            <div className="text-red-500 text-sm py-2">Failed to load {category} catalog: {catalogErrors[idx]}</div>
-                          ) : (
-                            <>
-                              <input
-                                type="text"
-                                className={inputClass + " mb-1"}
-                                placeholder={`Search ${categoryDisplayMap[category]}...`}
-                                value={searchTerm}
-                                onChange={e => handleSearchChange(idx, e.target.value)}
-                                onKeyDown={e => handleDropdownKeyDown(idx, filteredCatalog, e)}
-                                autoComplete="off"
-                              />
-                              <div className="relative">
-                                <select
-                                  ref={el => (dropdownRefs.current[`${idx}`] = el)}
-                                  className={inputClass + " appearance-none"}
-                                  value={item.linkedId || ''}
-                                  onChange={e => handleLinkSelect(idx, e.target.value)}
-                                  required
-                                  size={Math.min(filteredCatalog.length + 2, 8)}
-                                  style={{ width: "100%" }}
-                                  onBlur={() => setDropdownActiveIdx(d => ({ ...d, [idx]: -1 }))}
-                                >
-                                  <option value="" disabled>
-                                    {isLoading
-                                      ? "Loading..."
-                                      : filteredCatalog.length === 0 && searchTerm
-                                        ? "No matches"
-                                        : `Select ${categoryDisplayMap[category]}...`}
-                                  </option>
-                                  {filteredCatalog.map((catItem, i) => (
-                                    <option
-                                      key={catItem.id}
-                                      value={catItem.id}
-                                      style={{
-                                        background: activeIdx === i ? "#e0e7ff" : "",
-                                        color: activeIdx === i ? "#3730a3" : ""
-                                      }}
-                                    >
-                                      {catItem.name}
+                    return (
+                      <tr key={idx}>
+                        <td className="align-middle text-center">
+                          <input type="text" className={inputCenterClass} value={item.description} onChange={e => handleLineChange(idx, 'description', e.target.value)} required />
+                        </td>
+                        <td className="align-middle text-center">
+                          <input type="number" className={inputCenterClass} value={item.quantity} min={1} style={{ width: 60 }} onChange={e => handleLineChange(idx, 'quantity', e.target.value)} required />
+                        </td>
+                        <td className="align-middle text-center">
+                          <div className={dollarInputWrapper}>
+                            <span className={dollarPrefix}>$</span>
+                            <input
+                              type="text"
+                              className={inputCenterClass + " pl-6"}
+                              value={item.unitPrice}
+                              min={0}
+                              step="0.01"
+                              style={{ width: 90 }}
+                              onChange={handleLineDollarChange(idx, 'unitPrice')}
+                              onBlur={handleLineDollarBlur(idx, 'unitPrice')}
+                              required
+                              inputMode="decimal"
+                              pattern="^\d+(\.\d{1,2})?$"
+                            />
+                          </div>
+                        </td>
+                        <td className="align-middle text-center">
+                          <select className={inputCenterClass} value={item.category} onChange={e => handleLineCategoryChange(idx, e.target.value)}>
+                            <option value="Part">Part</option>
+                            <option value="Accessory">Accessory</option>
+                            <option value="Device">Device</option>
+                            <option value="Game">Game</option>
+                          </select>
+                        </td>
+                        <td className="align-middle text-center">
+                          <div className="flex flex-col gap-1 relative">
+                            {hasCatalogError ? (
+                              <div className="text-red-500 text-sm py-2">Failed to load {category} catalog: {catalogErrors[idx]}</div>
+                            ) : (
+                              <>
+                                <input
+                                  type="text"
+                                  className={inputCenterClass + " mb-1"}
+                                  placeholder={`Search ${categoryDisplayMap[category]}...`}
+                                  value={searchTerm}
+                                  onChange={e => handleSearchChange(idx, e.target.value)}
+                                  onKeyDown={e => handleDropdownKeyDown(idx, filteredCatalog, e)}
+                                  autoComplete="off"
+                                />
+                                <div className="relative">
+                                  <select
+                                    ref={el => (dropdownRefs.current[`${idx}`] = el)}
+                                    className={inputCenterClass + " appearance-none"}
+                                    value={item.linkedId || ''}
+                                    onChange={e => handleLinkSelect(idx, e.target.value)}
+                                    required
+                                    size={Math.min(filteredCatalog.length + 2, 8)}
+                                    style={{ width: "100%" }}
+                                    onBlur={() => setDropdownActiveIdx(d => ({ ...d, [idx]: -1 }))}
+                                  >
+                                    <option value="" disabled>
+                                      {isLoading
+                                        ? "Loading..."
+                                        : filteredCatalog.length === 0 && searchTerm
+                                          ? "No matches"
+                                          : `Select ${categoryDisplayMap[category]}...`}
                                     </option>
-                                  ))}
-                                  <option value="_create_new">+ Add New {categoryDisplayMap[category]}...</option>
-                                </select>
-                              </div>
-                            </>
+                                    {filteredCatalog.map((catItem, i) => (
+                                      <option
+                                        key={catItem.id}
+                                        value={catItem.id}
+                                        style={{
+                                          background: activeIdx === i ? "#e0e7ff" : "",
+                                          color: activeIdx === i ? "#3730a3" : ""
+                                        }}
+                                      >
+                                        {catItem.name}
+                                      </option>
+                                    ))}
+                                    <option value="_create_new">+ Add New {categoryDisplayMap[category]}...</option>
+                                  </select>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                        <td className="align-middle text-center">
+                          {lineItems.length > 1 && (
+                            <button type="button" className="text-red-500 text-lg px-2" onClick={() => handleRemoveLine(idx)} title="Remove">×</button>
                           )}
-                        </div>
-                      </td>
-                      <td>
-                        <input type="text" className={inputClass} value={item.notes} onChange={e => handleLineChange(idx, 'notes', e.target.value)} />
-                      </td>
-                      <td>
-                        {lineItems.length > 1 && (
-                          <button type="button" className="text-red-500 text-lg px-2" onClick={() => handleRemoveLine(idx)} title="Remove">×</button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
             <button type="button" className="text-indigo-600 hover:underline text-sm" onClick={handleAddLine}>+ Add Line Item</button>
           </div>
           {/* Shipping Cost & Other Fees */}
