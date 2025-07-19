@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import SettingsProfile from './SettingsProfile';
 import SettingsInvite from './SettingsInvite';
 import SettingsGroup from './SettingsGroup';
+import SettingsCatalog from './SettingsCatalog'; // <-- Import
 
 const TABS = [
     { id: "profile", label: "Profile" },
     { id: "invite", label: "Invite User" },
     { id: "group", label: "Group Info" },
-    // Catalog is split out and handled elsewhere
+    { id: "catalog", label: "Catalog" }, // <-- Add Catalog tab
 ];
 
 const Settings = ({ onBack, showNotification, userProfile }) => {
@@ -51,6 +52,9 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
                 )}
                 {activeTab === "group" && (
                     <SettingsGroup userProfile={userProfile} showNotification={showNotification} />
+                )}
+                {activeTab === "catalog" && (
+                    <SettingsCatalog userProfile={userProfile} showNotification={showNotification} />
                 )}
             </main>
         </div>
