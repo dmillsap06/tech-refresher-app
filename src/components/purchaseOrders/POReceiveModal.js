@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { doc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
+import React, { useState, useRef, useEffect } from 'react';
+import { doc, updateDoc, serverTimestamp, increment, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import logError from '../../utils/logError';
 
@@ -13,6 +13,28 @@ function getRemaining(li) {
   );
 }
 
+// Helper to display linked catalog item name (for table)
+async function fetchLinkedName(category, linkedId) {
+  if (!linkedId) return '';
+  let col;
+  switch (category) {
+    case 'Part': col = 'parts'; break;
+    case 'Accessory': col = 'accessories'; break;
+    case 'Device': col = 'deviceTypes'; break;
+    case 'Game': col = 'games'; break;
+    default: return linkedId;
+  }
+  try {
+    const docSnap = await getDoc(doc(db, col, linkedId));
+    if (docSnap.exists()) {
+      return docSnap.data().name || linkedId;
+    }
+    return linkedId;
+  } catch {
+    return linkedId;
+  }
+}
+
 const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
   const [step, setStep] = useState('ask-partial');
   const [receiveAll, setReceiveAll] = useState(true);
@@ -20,14 +42,24 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
     po.lineItems.map(li => getRemaining(li))
   );
   const [saving, setSaving] = useState(false);
+  const [linkedNames, setLinkedNames] = useState([]); // for table display
   const errorReported = useRef(false);
 
-  // Block receive if any line item cannot be matched (enforced)
-  const allLinked = po.lineItems.every(
-    li =>
-      (li.category === 'Inventory' && li.inventoryId) ||
-      (li.category === 'Part' && li.partId)
-  );
+  // Block receive if any line item is not linked (new logic)
+  const allLinked = po.lineItems.every(li => li.linkedId);
+
+  useEffect(() => {
+    // Fetch linked catalog item names for display
+    const fetchAll = async () => {
+      const names = await Promise.all(
+        po.lineItems.map(li =>
+          li.linkedId ? fetchLinkedName(li.category, li.linkedId) : ''
+        )
+      );
+      setLinkedNames(names);
+    };
+    fetchAll();
+  }, [po.lineItems]);
 
   if (!allLinked) {
     return (
@@ -35,7 +67,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-lg relative">
           <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
           <h2 className="text-xl font-bold mb-4 text-red-700 dark:text-red-300">Cannot Receive</h2>
-          <p className="mb-6 text-red-600">All line items must be linked to an inventory or part item before receiving.</p>
+          <p className="mb-6 text-red-600">All line items must be linked to a catalog item before receiving.</p>
           <div className="flex justify-end">
             <button
               className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
@@ -138,18 +170,22 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
         note: summary
       });
 
-      // Update inventory/parts
+      // Update inventory/parts/accessories/devices/games stock if desired
       for (let idx = 0; idx < newLineItems.length; idx++) {
         const li = po.lineItems[idx];
         const qty = Number(quantities[idx] || 0);
-        if (qty > 0) {
-          if (li.category === 'Inventory' && li.inventoryId) {
-            await updateDoc(doc(db, 'inventory', li.inventoryId), {
-              stock: increment(qty),
-              updatedAt: serverTimestamp()
-            });
-          } else if (li.category === 'Part' && li.partId) {
-            await updateDoc(doc(db, 'parts', li.partId), {
+        if (qty > 0 && li.linkedId) {
+          let col = null;
+          switch (li.category) {
+            case 'Part': col = 'parts'; break;
+            case 'Accessory': col = 'accessories'; break;
+            case 'Device': col = 'deviceTypes'; break;
+            case 'Game': col = 'games'; break;
+            default: break;
+          }
+          // If you want to increment stock for all, do so here
+          if (col) {
+            await updateDoc(doc(db, col, li.linkedId), {
               stock: increment(qty),
               updatedAt: serverTimestamp()
             });
@@ -195,7 +231,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
               <th className="px-2 py-1 text-center">Ordered</th>
               <th className="px-2 py-1 text-center">Prev. Received</th>
               <th className="px-2 py-1 text-center">Receive Now</th>
-              <th className="px-2 py-1">Linked Item</th>
+              <th className="px-2 py-1">Linked Catalog Item</th>
             </tr>
           </thead>
           <tbody>
@@ -231,9 +267,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
                     )}
                   </td>
                   <td>
-                    {li.category === 'Inventory'
-                      ? (li.inventoryName || li.inventoryId)
-                      : (li.partName || li.partId)}
+                    {linkedNames[idx] || <span className="text-red-500">Not linked</span>}
                   </td>
                 </tr>
               );
