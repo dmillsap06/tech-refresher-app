@@ -511,264 +511,266 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-4xl max-h-[90vh] relative flex flex-col overflow-y-auto">
-        <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
-        <div className="flex items-center mb-4">
-          <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
-            Purchase Order Details
-          </h2>
-          {badge}
-        </div>
-        {/* PO fields */}
-        <div className="mb-6">
-          <label className="block font-medium mb-1">Vendor</label>
-          {editMode ? (
-            <input
-              type="text"
-              className={inputClass}
-              value={formState.vendor}
-              onChange={e => setFormState(f => ({ ...f, vendor: e.target.value }))}
-            />
-          ) : <div>{formState.vendor}</div>}
-        </div>
-        <div className="mb-6">
-          <label className="block font-medium mb-1">Vendor Order #</label>
-          {editMode ? (
-            <input
-              type="text"
-              className={inputClass}
-              value={formState.vendorOrderNumber}
-              onChange={e => setFormState(f => ({ ...f, vendorOrderNumber: e.target.value }))}
-            />
-          ) : <div>{formState.vendorOrderNumber || '-'}</div>}
-        </div>
-        <div className="mb-6">
-          <label className="block font-medium mb-1">Date</label>
-          {editMode ? (
-            <input
-              type="date"
-              className={inputClass}
-              value={formState.date}
-              onChange={e => setFormState(f => ({ ...f, date: e.target.value }))}
-            />
-          ) : <div>{formatFriendlyDate(formState.date)}</div>}
-        </div>
-        {editMode ? lineItemsEditTable : lineItemsViewTable}
-        <div className="mb-6">
-          <label className="block font-medium mb-1">Notes</label>
-          {editMode ? (
-            <textarea
-              className={inputClass}
-              value={formState.notes}
-              onChange={e => setFormState(f => ({ ...f, notes: e.target.value }))}
-            />
-          ) : <div className="whitespace-pre-line">{formState.notes}</div>}
-        </div>
-        <div className="mb-6 flex gap-6">
-          <div>
-            <label className="block font-medium mb-1">Tax</label>
-            {editMode ? (
-              <div className={dollarInputWrapper}>
-                <span className={dollarPrefix}>$</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  className={inputClass + " pl-6"}
-                  value={formState.tax}
-                  onChange={e => setFormState(f => ({ ...f, tax: e.target.value.replace(/[^0-9.]/g, '') }))}
-                />
-              </div>
-            ) : formatMoney(formState.tax)}
+      <div className="w-full max-w-7xl">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 relative flex flex-col max-h-[90vh] overflow-y-auto">
+          <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+          <div className="flex items-center mb-4">
+            <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
+              Purchase Order Details
+            </h2>
+            {badge}
           </div>
-          <div>
-            <label className="block font-medium mb-1">Shipping Cost</label>
+          {/* PO fields */}
+          <div className="mb-6">
+            <label className="block font-medium mb-1">Vendor</label>
             {editMode ? (
-              <div className={dollarInputWrapper}>
-                <span className={dollarPrefix}>$</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  className={inputClass + " pl-6"}
-                  value={formState.shippingCost}
-                  onChange={e => setFormState(f => ({ ...f, shippingCost: e.target.value.replace(/[^0-9.]/g, '') }))}
-                />
-              </div>
-            ) : formatMoney(formState.shippingCost)}
+              <input
+                type="text"
+                className={inputClass}
+                value={formState.vendor}
+                onChange={e => setFormState(f => ({ ...f, vendor: e.target.value }))}
+              />
+            ) : <div>{formState.vendor}</div>}
           </div>
-          <div>
-            <label className="block font-medium mb-1">Other Fees</label>
+          <div className="mb-6">
+            <label className="block font-medium mb-1">Vendor Order #</label>
             {editMode ? (
-              <div className={dollarInputWrapper}>
-                <span className={dollarPrefix}>$</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  className={inputClass + " pl-6"}
-                  value={formState.otherFees}
-                  onChange={e => setFormState(f => ({ ...f, otherFees: e.target.value.replace(/[^0-9.]/g, '') }))}
-                />
-              </div>
-            ) : formatMoney(formState.otherFees)}
+              <input
+                type="text"
+                className={inputClass}
+                value={formState.vendorOrderNumber}
+                onChange={e => setFormState(f => ({ ...f, vendorOrderNumber: e.target.value }))}
+              />
+            ) : <div>{formState.vendorOrderNumber || '-'}</div>}
           </div>
-        </div>
-        <div className="mb-6">
-          <label className="block font-medium mb-1">Subtotal</label>
-          <div>{formatMoney(subtotal)}</div>
-        </div>
-        <div className="mb-6">
-          <label className="block font-medium mb-1">Total</label>
-          <div>{formatMoney(total)}</div>
-        </div>
-        {/* Status History */}
-        <div className="mb-6">
-          <label className="block font-medium mb-1">Status History</label>
-          {statusHistory.length === 0 ? (
-            <div className="text-gray-400 text-sm">No status changes recorded yet.</div>
-          ) : (
-            <ul className="text-sm bg-gray-100 dark:bg-gray-700 rounded p-2 space-y-1 max-h-32 overflow-y-auto">
-              {statusHistory.map((entry, i) => (
-                <li key={i}>
-                  <span className="font-semibold">{entry.status}</span>
-                  {" by "}
-                  <span>{entry.by}</span>
-                  {" on "}
-                  <span title={formatFriendlyDate(entry.at)}>{formatFriendlyDate(entry.at)}</span>
-                  {entry.note ? <>: <span className="italic">{entry.note}</span></> : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        {/* Payment History */}
-        <div className="mb-6">
-          <label className="block font-medium mb-1">Payment History</label>
-          <PaymentHistory />
-          {canMarkPaid && (
-            <button
-              className="mt-4 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700"
-              onClick={() => setShowMarkPaid(true)}
-            >
-              Mark as Paid
-            </button>
-          )}
-        </div>
-        {/* Shipment History */}
-        <div className="mb-6">
-          <label className="block font-medium mb-1">Shipment History</label>
-          <ShipmentHistory />
-          {canMarkShipped && (
-            <button
-              className="mt-4 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-              onClick={() => setShowMarkShipped(true)}
-            >
-              Mark as Shipped
-            </button>
-          )}
-        </div>
-        {/* Buttons */}
-        <div className="flex justify-end gap-3 mt-5">
-          {canReceive && (
-            <button
-              type="button"
-              className="px-5 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700"
-              onClick={() => setShowReceiveModal(true)}
-            >Receive
-            </button>
-          )}
-          {editMode ? (
-            <>
+          <div className="mb-6">
+            <label className="block font-medium mb-1">Date</label>
+            {editMode ? (
+              <input
+                type="date"
+                className={inputClass}
+                value={formState.date}
+                onChange={e => setFormState(f => ({ ...f, date: e.target.value }))}
+              />
+            ) : <div>{formatFriendlyDate(formState.date)}</div>}
+          </div>
+          {editMode ? lineItemsEditTable : lineItemsViewTable}
+          <div className="mb-6">
+            <label className="block font-medium mb-1">Notes</label>
+            {editMode ? (
+              <textarea
+                className={inputClass}
+                value={formState.notes}
+                onChange={e => setFormState(f => ({ ...f, notes: e.target.value }))}
+              />
+            ) : <div className="whitespace-pre-line">{formState.notes}</div>}
+          </div>
+          <div className="mb-6 flex gap-6">
+            <div>
+              <label className="block font-medium mb-1">Tax</label>
+              {editMode ? (
+                <div className={dollarInputWrapper}>
+                  <span className={dollarPrefix}>$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className={inputClass + " pl-6"}
+                    value={formState.tax}
+                    onChange={e => setFormState(f => ({ ...f, tax: e.target.value.replace(/[^0-9.]/g, '') }))}
+                  />
+                </div>
+              ) : formatMoney(formState.tax)}
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Shipping Cost</label>
+              {editMode ? (
+                <div className={dollarInputWrapper}>
+                  <span className={dollarPrefix}>$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className={inputClass + " pl-6"}
+                    value={formState.shippingCost}
+                    onChange={e => setFormState(f => ({ ...f, shippingCost: e.target.value.replace(/[^0-9.]/g, '') }))}
+                  />
+                </div>
+              ) : formatMoney(formState.shippingCost)}
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Other Fees</label>
+              {editMode ? (
+                <div className={dollarInputWrapper}>
+                  <span className={dollarPrefix}>$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className={inputClass + " pl-6"}
+                    value={formState.otherFees}
+                    onChange={e => setFormState(f => ({ ...f, otherFees: e.target.value.replace(/[^0-9.]/g, '') }))}
+                  />
+                </div>
+              ) : formatMoney(formState.otherFees)}
+            </div>
+          </div>
+          <div className="mb-6">
+            <label className="block font-medium mb-1">Subtotal</label>
+            <div>{formatMoney(subtotal)}</div>
+          </div>
+          <div className="mb-6">
+            <label className="block font-medium mb-1">Total</label>
+            <div>{formatMoney(total)}</div>
+          </div>
+          {/* Status History */}
+          <div className="mb-6">
+            <label className="block font-medium mb-1">Status History</label>
+            {statusHistory.length === 0 ? (
+              <div className="text-gray-400 text-sm">No status changes recorded yet.</div>
+            ) : (
+              <ul className="text-sm bg-gray-100 dark:bg-gray-700 rounded p-2 space-y-1 max-h-32 overflow-y-auto">
+                {statusHistory.map((entry, i) => (
+                  <li key={i}>
+                    <span className="font-semibold">{entry.status}</span>
+                    {" by "}
+                    <span>{entry.by}</span>
+                    {" on "}
+                    <span title={formatFriendlyDate(entry.at)}>{formatFriendlyDate(entry.at)}</span>
+                    {entry.note ? <>: <span className="italic">{entry.note}</span></> : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          {/* Payment History */}
+          <div className="mb-6">
+            <label className="block font-medium mb-1">Payment History</label>
+            <PaymentHistory />
+            {canMarkPaid && (
+              <button
+                className="mt-4 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700"
+                onClick={() => setShowMarkPaid(true)}
+              >
+                Mark as Paid
+              </button>
+            )}
+          </div>
+          {/* Shipment History */}
+          <div className="mb-6">
+            <label className="block font-medium mb-1">Shipment History</label>
+            <ShipmentHistory />
+            {canMarkShipped && (
+              <button
+                className="mt-4 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                onClick={() => setShowMarkShipped(true)}
+              >
+                Mark as Shipped
+              </button>
+            )}
+          </div>
+          {/* Buttons */}
+          <div className="flex justify-end gap-3 mt-5">
+            {canReceive && (
               <button
                 type="button"
-                className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
-                onClick={() => {
-                  setEditMode(false);
-                  setFormState({
-                    vendor: po.vendor,
-                    vendorOrderNumber: po.vendorOrderNumber || '',
-                    date: po.date?.toDate?.().toISOString().substr(0, 10) || '',
-                    notes: po.notes || '',
-                    lineItems: po.lineItems?.map((li, idx) => ({
-                      ...li,
-                      unitPrice: (typeof li.unitPrice === 'number' && li.unitPrice === 0) ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice),
-                      index: idx,
-                    })) || [],
-                    shippingCost: (typeof po.shippingCost === 'number' && po.shippingCost === 0) ? '' : (typeof po.shippingCost === 'number' ? po.shippingCost.toFixed(2) : po.shippingCost),
-                    otherFees: (typeof po.otherFees === 'number' && po.otherFees === 0) ? '' : (typeof po.otherFees === 'number' ? po.otherFees.toFixed(2) : po.otherFees),
-                    tax: (typeof po.tax === 'number' && po.tax === 0) ? '' : (typeof po.tax === 'number' ? po.tax.toFixed(2) : po.tax),
-                    status: po.status,
-                  });
-                }}
-              >Cancel
+                className="px-5 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700"
+                onClick={() => setShowReceiveModal(true)}
+              >Receive
               </button>
+            )}
+            {editMode ? (
+              <>
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
+                  onClick={() => {
+                    setEditMode(false);
+                    setFormState({
+                      vendor: po.vendor,
+                      vendorOrderNumber: po.vendorOrderNumber || '',
+                      date: po.date?.toDate?.().toISOString().substr(0, 10) || '',
+                      notes: po.notes || '',
+                      lineItems: po.lineItems?.map((li, idx) => ({
+                        ...li,
+                        unitPrice: (typeof li.unitPrice === 'number' && li.unitPrice === 0) ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice),
+                        index: idx,
+                      })) || [],
+                      shippingCost: (typeof po.shippingCost === 'number' && po.shippingCost === 0) ? '' : (typeof po.shippingCost === 'number' ? po.shippingCost.toFixed(2) : po.shippingCost),
+                      otherFees: (typeof po.otherFees === 'number' && po.otherFees === 0) ? '' : (typeof po.otherFees === 'number' ? po.otherFees.toFixed(2) : po.otherFees),
+                      tax: (typeof po.tax === 'number' && po.tax === 0) ? '' : (typeof po.tax === 'number' ? po.tax.toFixed(2) : po.tax),
+                      status: po.status,
+                    });
+                  }}
+                >Cancel
+                </button>
+                <button
+                  type="button"
+                  className="px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700"
+                  disabled={saving}
+                  onClick={saveEdits}
+                >{saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </>
+            ) : canEdit && (
               <button
                 type="button"
                 className="px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700"
-                disabled={saving}
-                onClick={saveEdits}
-              >{saving ? 'Saving...' : 'Save Changes'}
+                onClick={() => setEditMode(true)}
+              >Edit
               </button>
-            </>
-          ) : canEdit && (
+            )}
             <button
               type="button"
-              className="px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700"
-              onClick={() => setEditMode(true)}
-            >Edit
+              className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
+              onClick={onClose}
+            >Close
             </button>
+          </div>
+          {showReceiveModal && (
+            <POReceiveModal
+              po={po}
+              userProfile={userProfile}
+              showNotification={showNotification}
+              onClose={() => setShowReceiveModal(false)}
+            />
           )}
-          <button
-            type="button"
-            className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
-            onClick={onClose}
-          >Close
-          </button>
+          {showCreateInventory && (
+            <CreateInventoryModal
+              userProfile={userProfile}
+              onCreated={handleCreatedInventory}
+              onClose={() => setShowCreateInventory(false)}
+              showNotification={showNotification}
+            />
+          )}
+          {showCreatePart && (
+            <CreatePartModal
+              userProfile={userProfile}
+              onCreated={handleCreatedPart}
+              onClose={() => setShowCreatePart(false)}
+              showNotification={showNotification}
+            />
+          )}
+          {showMarkPaid && (
+            <MarkAsPaidModal
+              open={showMarkPaid}
+              onClose={() => setShowMarkPaid(false)}
+              onSave={handleMarkPaid}
+              defaultAmount={total}
+              defaultDate={new Date().toISOString().slice(0, 10)}
+              loading={savingPayment}
+              groupId={userProfile.groupId}
+              paymentMethods={paymentMethods}
+            />
+          )}
+          {showMarkShipped && (
+            <MarkAsShippedModal
+              open={showMarkShipped}
+              onClose={() => setShowMarkShipped(false)}
+              onSave={handleMarkShipped}
+              lineItems={formState.lineItems}
+              defaultDate={new Date().toISOString().slice(0, 10)}
+              loading={savingShipment}
+            />
+          )}
         </div>
-        {showReceiveModal && (
-          <POReceiveModal
-            po={po}
-            userProfile={userProfile}
-            showNotification={showNotification}
-            onClose={() => setShowReceiveModal(false)}
-          />
-        )}
-        {showCreateInventory && (
-          <CreateInventoryModal
-            userProfile={userProfile}
-            onCreated={handleCreatedInventory}
-            onClose={() => setShowCreateInventory(false)}
-            showNotification={showNotification}
-          />
-        )}
-        {showCreatePart && (
-          <CreatePartModal
-            userProfile={userProfile}
-            onCreated={handleCreatedPart}
-            onClose={() => setShowCreatePart(false)}
-            showNotification={showNotification}
-          />
-        )}
-        {showMarkPaid && (
-          <MarkAsPaidModal
-            open={showMarkPaid}
-            onClose={() => setShowMarkPaid(false)}
-            onSave={handleMarkPaid}
-            defaultAmount={total}
-            defaultDate={new Date().toISOString().slice(0, 10)}
-            loading={savingPayment}
-            groupId={userProfile.groupId}
-            paymentMethods={paymentMethods}
-          />
-        )}
-        {showMarkShipped && (
-          <MarkAsShippedModal
-            open={showMarkShipped}
-            onClose={() => setShowMarkShipped(false)}
-            onSave={handleMarkShipped}
-            lineItems={formState.lineItems}
-            defaultDate={new Date().toISOString().slice(0, 10)}
-            loading={savingShipment}
-          />
-        )}
       </div>
     </div>
   );
