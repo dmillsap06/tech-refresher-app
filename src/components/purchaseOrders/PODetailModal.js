@@ -106,7 +106,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const canMarkShipped = formState.status === 'Paid';
   const canReceive = formState.status === 'Shipped' || formState.status === 'Partially Shipped';
   const canComplete = formState.status === 'Received';
-  // archive = status "Archived" (hidden from active)
+  const canEdit = formState.status === 'Created' && userProfile.groupId === po.groupId;
 
   const subtotal = formState.lineItems.reduce(
     (sum, li) => sum + (Number(li.quantity) * Number(li.unitPrice || 0)), 0
