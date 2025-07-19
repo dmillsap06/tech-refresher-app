@@ -20,7 +20,7 @@ const CatalogAccessories = ({ userProfile, showNotification }) => {
   const [selectedDeviceType, setSelectedDeviceType] = useState('');
   const [loading, setLoading] = useState(true);
   const [deviceTypesLoading, setDeviceTypesLoading] = useState(true);
-  const [brandsLoading, setBrandsLoading] = useState(true);
+  const [, setBrandsLoading] = useState(true);
 
   // Fetch brands for mapping
   useEffect(() => {
