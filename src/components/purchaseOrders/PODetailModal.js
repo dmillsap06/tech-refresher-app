@@ -313,8 +313,8 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     try {
       const totalQty = formState.lineItems.reduce((sum, li) => sum + Number(li.quantity), 0);
       const alreadyShippedQty = (po.shipments || []).reduce(
-        (sum, s) => sum + s.shippedLineItems?.reduce((s2, sli) => s2 + Number(sli.shipped || 0), 0), 0
-      );
+        (sum, s) => sum + s.shippedLineItems?.reduce((s2, sli) => s2 + Number(sli.shipped || 0), 0
+      ), 0);
       const newThisShipmentQty = shipmentData.shippedLineItems.reduce((sum, sli) => sum + Number(sli.shipped || 0), 0);
       const newTotalShipped = alreadyShippedQty + newThisShipmentQty;
 
@@ -528,6 +528,106 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     </div>
   );
 
+  // ---- FIELDS BLOCKS ----
+
+  // Vendor, Vendor Order #, Order Date all in one line
+  const poHeaderFields = (
+    <div className="mb-6 flex flex-col md:flex-row gap-4">
+      <div className="flex-1">
+        <label className="block font-medium mb-1">Vendor</label>
+        {editMode ? (
+          <input
+            type="text"
+            className={inputClass}
+            value={formState.vendor}
+            onChange={e => setFormState(f => ({ ...f, vendor: e.target.value }))}
+          />
+        ) : <div>{formState.vendor}</div>}
+      </div>
+      <div className="flex-1">
+        <label className="block font-medium mb-1">Vendor Order #</label>
+        {editMode ? (
+          <input
+            type="text"
+            className={inputClass}
+            value={formState.vendorOrderNumber}
+            onChange={e => setFormState(f => ({ ...f, vendorOrderNumber: e.target.value }))}
+          />
+        ) : <div>{formState.vendorOrderNumber || '-'}</div>}
+      </div>
+      <div className="flex-1">
+        <label className="block font-medium mb-1">Order Date</label>
+        {editMode ? (
+          <input
+            type="date"
+            className={inputClass}
+            value={formState.date}
+            onChange={e => setFormState(f => ({ ...f, date: e.target.value }))}
+          />
+        ) : <div>{formatFriendlyDate(formState.date)}</div>}
+      </div>
+    </div>
+  );
+
+  // Tax, Shipping Cost, Other Fees, Subtotal, Total all in one line
+  const poSummaryFields = (
+    <div className="mb-6 flex flex-col md:flex-row gap-4">
+      <div className="flex-1">
+        <label className="block font-medium mb-1">Tax</label>
+        {editMode ? (
+          <div className={dollarInputWrapper}>
+            <span className={dollarPrefix}>$</span>
+            <input
+              type="number"
+              step="0.01"
+              className={inputClass + " pl-6"}
+              value={formState.tax}
+              onChange={e => setFormState(f => ({ ...f, tax: e.target.value.replace(/[^0-9.]/g, '') }))}
+            />
+          </div>
+        ) : formatMoney(formState.tax)}
+      </div>
+      <div className="flex-1">
+        <label className="block font-medium mb-1">Shipping Cost</label>
+        {editMode ? (
+          <div className={dollarInputWrapper}>
+            <span className={dollarPrefix}>$</span>
+            <input
+              type="number"
+              step="0.01"
+              className={inputClass + " pl-6"}
+              value={formState.shippingCost}
+              onChange={e => setFormState(f => ({ ...f, shippingCost: e.target.value.replace(/[^0-9.]/g, '') }))}
+            />
+          </div>
+        ) : formatMoney(formState.shippingCost)}
+      </div>
+      <div className="flex-1">
+        <label className="block font-medium mb-1">Other Fees</label>
+        {editMode ? (
+          <div className={dollarInputWrapper}>
+            <span className={dollarPrefix}>$</span>
+            <input
+              type="number"
+              step="0.01"
+              className={inputClass + " pl-6"}
+              value={formState.otherFees}
+              onChange={e => setFormState(f => ({ ...f, otherFees: e.target.value.replace(/[^0-9.]/g, '') }))}
+            />
+          </div>
+        ) : formatMoney(formState.otherFees)}
+      </div>
+      <div className="flex-1">
+        <label className="block font-medium mb-1">Subtotal</label>
+        <div>{formatMoney(subtotal)}</div>
+      </div>
+      <div className="flex-1">
+        <label className="block font-medium mb-1">Total</label>
+        <div>{formatMoney(total)}</div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-7xl relative flex flex-col h-[98vh]">
@@ -539,41 +639,11 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
           {badge}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: '75vh' }}>
-          {/* PO fields */}
-          <div className="mb-6">
-            <label className="block font-medium mb-1">Vendor</label>
-            {editMode ? (
-              <input
-                type="text"
-                className={inputClass}
-                value={formState.vendor}
-                onChange={e => setFormState(f => ({ ...f, vendor: e.target.value }))}
-              />
-            ) : <div>{formState.vendor}</div>}
-          </div>
-          <div className="mb-6">
-            <label className="block font-medium mb-1">Vendor Order #</label>
-            {editMode ? (
-              <input
-                type="text"
-                className={inputClass}
-                value={formState.vendorOrderNumber}
-                onChange={e => setFormState(f => ({ ...f, vendorOrderNumber: e.target.value }))}
-              />
-            ) : <div>{formState.vendorOrderNumber || '-'}</div>}
-          </div>
-          <div className="mb-6">
-            <label className="block font-medium mb-1">Date</label>
-            {editMode ? (
-              <input
-                type="date"
-                className={inputClass}
-                value={formState.date}
-                onChange={e => setFormState(f => ({ ...f, date: e.target.value }))}
-              />
-            ) : <div>{formatFriendlyDate(formState.date)}</div>}
-          </div>
+          {/* PO header fields (Vendor, Vendor Order #, Order Date) */}
+          {poHeaderFields}
+          {/* PO line items */}
           {editMode ? lineItemsEditTable : lineItemsViewTable}
+          {/* Notes */}
           <div className="mb-6">
             <label className="block font-medium mb-1">Notes</label>
             {editMode ? (
@@ -584,61 +654,8 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
               />
             ) : <div className="whitespace-pre-line">{formState.notes}</div>}
           </div>
-          <div className="mb-6 flex gap-6">
-            <div>
-              <label className="block font-medium mb-1">Tax</label>
-              {editMode ? (
-                <div className={dollarInputWrapper}>
-                  <span className={dollarPrefix}>$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className={inputClass + " pl-6"}
-                    value={formState.tax}
-                    onChange={e => setFormState(f => ({ ...f, tax: e.target.value.replace(/[^0-9.]/g, '') }))}
-                  />
-                </div>
-              ) : formatMoney(formState.tax)}
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Shipping Cost</label>
-              {editMode ? (
-                <div className={dollarInputWrapper}>
-                  <span className={dollarPrefix}>$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className={inputClass + " pl-6"}
-                    value={formState.shippingCost}
-                    onChange={e => setFormState(f => ({ ...f, shippingCost: e.target.value.replace(/[^0-9.]/g, '') }))}
-                  />
-                </div>
-              ) : formatMoney(formState.shippingCost)}
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Other Fees</label>
-              {editMode ? (
-                <div className={dollarInputWrapper}>
-                  <span className={dollarPrefix}>$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className={inputClass + " pl-6"}
-                    value={formState.otherFees}
-                    onChange={e => setFormState(f => ({ ...f, otherFees: e.target.value.replace(/[^0-9.]/g, '') }))}
-                  />
-                </div>
-              ) : formatMoney(formState.otherFees)}
-            </div>
-          </div>
-          <div className="mb-6">
-            <label className="block font-medium mb-1">Subtotal</label>
-            <div>{formatMoney(subtotal)}</div>
-          </div>
-          <div className="mb-6">
-            <label className="block font-medium mb-1">Total</label>
-            <div>{formatMoney(total)}</div>
-          </div>
+          {/* PO summary fields (Tax, Shipping, Fees, Subtotal, Total) */}
+          {poSummaryFields}
           {/* Status History */}
           <div className="mb-6">
             <label className="block font-medium mb-1">Status History</label>

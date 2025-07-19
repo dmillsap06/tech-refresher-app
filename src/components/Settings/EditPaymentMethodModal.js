@@ -53,7 +53,8 @@ export default function EditPaymentMethodModal({ open, onClose, method, groupId 
       nickname,
       lastFour,
       notes,
-      active
+      active,
+      groupId // <-- Ensure groupId is included in the saved document
     }).then(() => {
       setSaving(false);
       onClose(true);
