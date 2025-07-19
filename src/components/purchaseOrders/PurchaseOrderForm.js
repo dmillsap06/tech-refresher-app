@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase';
-import { collection, addDoc, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, Timestamp, query, where } from 'firebase/firestore';
 import logError from '../../utils/logError';
 import CreatePartModal from './CreatePartModal';
 import CreateAccessoryModal from './CreateAccessoryModal';
@@ -62,10 +62,10 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const fetchCatalogs = async () => {
     try {
       const [partSnap, accessorySnap, deviceSnap, gameSnap] = await Promise.all([
-        getDocs(collection(db, 'parts')),
-        getDocs(collection(db, 'accessories')),
-        getDocs(collection(db, 'devices')),
-        getDocs(collection(db, 'games')),
+        getDocs(query(collection(db, 'parts'), where('groupId', '==', userProfile.groupId))),
+        getDocs(query(collection(db, 'accessories'), where('groupId', '==', userProfile.groupId))),
+        getDocs(query(collection(db, 'devices'), where('groupId', '==', userProfile.groupId))),
+        getDocs(query(collection(db, 'games'), where('groupId', '==', userProfile.groupId))),
       ]);
       setCatalogs({
         Part: partSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
