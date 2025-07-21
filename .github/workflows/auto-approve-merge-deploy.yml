@@ -1,3 +1,4 @@
+# This workflow tests the auto-approve and auto-merge functionality for Copilot PRs
 name: Auto Approve, Merge & Deploy for Copilot PRs
 
 on:
