@@ -1,4 +1,3 @@
-#test
 name: Auto Approve, Merge & Deploy for Copilot PRs
 
 on:
@@ -30,8 +29,8 @@ jobs:
 
   build_and_deploy:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    needs: auto-merge
+    needs: [auto-merge]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v3
 
@@ -48,7 +47,7 @@ jobs:
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}'
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
           channelId: live
           projectId: tech-refresher-tracker
