@@ -1,3 +1,4 @@
+# This comment is added to test that auto-approve and auto-merge work for Copilot PRs
 name: Auto Approve, Merge & Deploy for Copilot PRs
 
 on:
