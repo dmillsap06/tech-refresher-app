@@ -90,36 +90,38 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
         </div>
         <div className="mb-3 border-t pt-3">
           <label className="block font-medium mb-2">Line Items Shipped</label>
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr>
-                <th className="px-2 py-1">Description</th>
-                <th className="px-2 py-1 text-center">Qty Ordered</th>
-                <th className="px-2 py-1 text-center">Qty Shipped</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shippedQuantities.map((item, idx) => (
-                <tr key={idx}>
-                  <td className="px-2 py-1">{item.description}</td>
-                  <td className="px-2 py-1 text-center">{item.quantity}</td>
-                  <td className="px-2 py-1 text-center w-24">
-                    <input
-                      type="number"
-                      className={inputClass}
-                      value={item.shipped}
-                      min={0}
-                      max={item.max !== undefined ? item.max : item.quantity}
-                      onChange={e => updateShipped(idx, e.target.value)}
-                    />
-                    {touched && (Number(item.shipped) > (item.max !== undefined ? item.max : item.quantity) || Number(item.shipped) < 0) && (
-                      <div className="text-red-600 text-xs mt-1">0 &le; Qty &le; {item.max !== undefined ? item.max : item.quantity}</div>
-                    )}
-                  </td>
+          <div className="max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                <tr>
+                  <th className="px-2 py-1">Description</th>
+                  <th className="px-2 py-1 text-center">Qty Ordered</th>
+                  <th className="px-2 py-1 text-center">Qty Shipped</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {shippedQuantities.map((item, idx) => (
+                  <tr key={idx}>
+                    <td className="px-2 py-1">{item.description}</td>
+                    <td className="px-2 py-1 text-center">{item.quantity}</td>
+                    <td className="px-2 py-1 text-center w-24">
+                      <input
+                        type="number"
+                        className={inputClass}
+                        value={item.shipped}
+                        min={0}
+                        max={item.max !== undefined ? item.max : item.quantity}
+                        onChange={e => updateShipped(idx, e.target.value)}
+                      />
+                      {touched && (Number(item.shipped) > (item.max !== undefined ? item.max : item.quantity) || Number(item.shipped) < 0) && (
+                        <div className="text-red-600 text-xs mt-1">0 &le; Qty &le; {item.max !== undefined ? item.max : item.quantity}</div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {touched && !shippedQuantities.some(q => Number(q.shipped) > 0) && (
             <div className="text-red-600 text-xs mt-1">You must ship at least one item.</div>
           )}
