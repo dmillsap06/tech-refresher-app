@@ -95,7 +95,7 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
           </div>
           {/* Table */}
           <div className="border-t pt-4 sm:pt-6">
-            <label className="block font-medium mb-3 sm:mb-4 text-sm sm:text-base lg:text-lg">Line Items Shipped</label>
+            <label className="block font-medium mb-3 sm:mb-4 text-sm sm:text-base lg:text-lg">Line Items Shipped345345</label>
             <div className="relative">
               <table className="min-w-full text-xs sm:text-sm lg:text-base border-collapse">
                 <thead className="sticky top-0 bg-gray-50 dark:bg-gray-700">
