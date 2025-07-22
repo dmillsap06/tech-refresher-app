@@ -56,7 +56,9 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-4 my-4 relative flex flex-col h-[95vh]">
         {/* Header */}
-        <h2 className="flex-shrink-0 text-xl sm:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 text-indigo-700 dark:text-indigo-300">Mark as Shipped</h2>
+        <div className="flex-shrink-0">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 text-indigo-700 dark:text-indigo-300">Mark as Shipped</h2>
+        </div>
         
         {/* Scrollable body: fields + table */}
         <div className="flex-1 min-h-0 overflow-y-auto">
