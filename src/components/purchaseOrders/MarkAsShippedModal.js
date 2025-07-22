@@ -1,3 +1,4 @@
+//Comment
 import React, { useState } from 'react';
 
 const inputClass = "border border-gray-300 dark:border-gray-600 rounded px-2 sm:px-3 py-1 sm:py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-sm sm:text-base";
