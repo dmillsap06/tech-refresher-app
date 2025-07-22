@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 const inputClass = "border border-gray-300 dark:border-gray-600 rounded px-2 sm:px-3 py-1 sm:py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-sm sm:text-base";
 
 export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, defaultDate, loading }) {
+  // --- STATE AND LOGIC (Unchanged) ---
   const [dateShipped, setDateShipped] = useState(defaultDate || new Date().toISOString().substring(0, 10));
   const [tracking, setTracking] = useState('');
   const [notes, setNotes] = useState('');
@@ -52,108 +53,88 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
 
   if (!open) return null;
 
+  // --- NEW JSX STRUCTURE (Rebuilt from scratch) ---
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-4 my-4 relative flex flex-col h-[95vh]">
-        {/* Header */}
-        <div className="flex-shrink-0">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 text-indigo-700 dark:text-indigo-300">Mark as Shipped</h2>
-        </div>
+      {/* Modal container with fixed height and flex-col, like the working example */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-7xl mx-auto my-8 relative flex flex-col h-[95vh]">
         
-        {/* Scrollable body: fields + table */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {/* Fields */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+        {/* Header Section (fixed, does not scroll) */}
+        <div className="flex-shrink-0">
+          <h2 className="text-2xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">Mark as Shipped</h2>
+        </div>
+
+        {/* Scrollable Content Section */}
+        <div className="flex-1 min-h-0 overflow-y-auto pr-4 -mr-4">
+          {/* Input Fields */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div>
-              <label className="block font-medium mb-1 text-sm sm:text-base">Date Shipped <span className="text-red-500">*</span></label>
-              <input
-                type="date"
-                className={inputClass}
-                value={dateShipped}
-                onChange={e => setDateShipped(e.target.value)}
-              />
+              <label className="block font-medium mb-1">Date Shipped <span className="text-red-500">*</span></label>
+              <input type="date" className={inputClass} value={dateShipped} onChange={e => setDateShipped(e.target.value)} />
               {touched && !dateShipped && <div className="text-red-600 text-xs mt-1">Date is required.</div>}
             </div>
             <div>
-              <label className="block font-medium mb-1 text-sm sm:text-base">Tracking Number</label>
-              <input
-                type="text"
-                className={inputClass}
-                value={tracking}
-                onChange={e => setTracking(e.target.value)}
-                placeholder="Optional"
-              />
+              <label className="block font-medium mb-1">Tracking Number</label>
+              <input type="text" className={inputClass} value={tracking} onChange={e => setTracking(e.target.value)} placeholder="Optional" />
             </div>
             <div>
-              <label className="block font-medium mb-1 text-sm sm:text-base">Notes</label>
-              <textarea
-                className={inputClass}
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                rows={2}
-                placeholder="Optional"
-              />
+              <label className="block font-medium mb-1">Notes</label>
+              <textarea className={inputClass} value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Optional" />
             </div>
           </div>
-          {/* Table */}
-          <div className="border-t pt-4 sm:pt-6">
-            <label className="block font-medium mb-3 sm:mb-4 text-sm sm:text-base lg:text-lg">Line Items Shipped</label>
-            <div className="relative">
-              <table className="min-w-full text-xs sm:text-sm lg:text-base border-collapse">
-                <thead className="sticky top-0 bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold">Description</th>
-                    <th className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold min-w-[100px]">Qty Ordered</th>
-                    <th className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold min-w-[120px]">Qty Shipped</th>
+
+          {/* Line Items Table */}
+          <div className="border-t pt-6">
+            <label className="block font-medium mb-4 text-lg">Line Items Shipped</label>
+            <table className="min-w-full text-sm border-collapse">
+              <thead className="sticky top-0 bg-gray-50 dark:bg-gray-700 z-10">
+                <tr>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold">Description</th>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-32">Qty Ordered</th>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-40">Qty Shipped</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shippedQuantities.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{item.description}</td>
+                    <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{item.quantity}</td>
+                    <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">
+                      <input
+                        type="number"
+                        className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-center"
+                        value={item.shipped}
+                        min={0}
+                        max={item.max !== undefined ? item.max : item.quantity}
+                        onChange={e => updateShipped(idx, e.target.value)}
+                        placeholder="0"
+                      />
+                      {touched && (Number(item.shipped) > (item.max !== undefined ? item.max : item.quantity) || Number(item.shipped) < 0) && (
+                        <div className="text-red-600 text-xs mt-1">0 ≤ Qty ≤ {item.max !== undefined ? item.max : item.quantity}</div>
+                      )}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {shippedQuantities.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3">{item.description}</td>
-                      <td className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">{item.quantity}</td>
-                      <td className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">
-                        <input
-                          type="number"
-                          className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-full max-w-[100px] mx-auto focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-center"
-                          value={item.shipped}
-                          min={0}
-                          max={item.max !== undefined ? item.max : item.quantity}
-                          onChange={e => updateShipped(idx, e.target.value)}
-                        />
-                        {touched && (Number(item.shipped) > (item.max !== undefined ? item.max : item.quantity) || Number(item.shipped) < 0) && (
-                          <div className="text-red-600 text-xs mt-1">0 ≤ Qty ≤ {item.max !== undefined ? item.max : item.quantity}</div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
             {touched && !shippedQuantities.some(q => Number(q.shipped) > 0) && (
-              <div className="text-red-600 text-xs sm:text-sm mt-2 font-medium">You must ship at least one item.</div>
+              <div className="text-red-600 text-sm mt-2 font-medium">You must ship at least one item.</div>
             )}
           </div>
         </div>
-        
-        {/* Action buttons always visible */}
-        <div className="flex-shrink-0 flex justify-end gap-3 sm:gap-4 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t bg-white dark:bg-gray-800">
+
+        {/* Action Buttons (fixed, does not scroll) */}
+        <div className="flex-shrink-0 flex justify-end gap-4 mt-6 pt-6 border-t">
           <button
             type="button"
-            className="px-4 sm:px-6 py-2 sm:py-3 rounded text-sm sm:text-base bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 font-medium"
+            className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 font-medium"
             onClick={() => onClose(false)}
             disabled={loading}
           >Cancel</button>
           <button
             type="button"
-            className={`px-5 sm:px-8 py-2 sm:py-3 rounded text-sm sm:text-base bg-indigo-600 text-white font-semibold hover:bg-indigo-700 ${loading ? 'opacity-60' : ''}`}
-            disabled={loading || !dateShipped || !shippedQuantities.some(q => Number(q.shipped) > 0) ||
-              shippedQuantities.some(q =>
-                isNaN(Number(q.shipped)) ||
-                Number(q.shipped) < 0 ||
-                Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity)
-              )
-            }
+            className={`px-8 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 ${loading || !dateShipped || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity)) ? 'opacity-60' : ''}`}
+            disabled={loading || !dateShipped || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity))}
             onClick={handleSave}
           >{loading ? 'Saving...' : 'Save'}</button>
         </div>
