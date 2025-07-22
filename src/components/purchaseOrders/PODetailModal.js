@@ -8,6 +8,7 @@ import CreatePartModal from './CreatePartModal';
 import MarkAsPaidModal from './MarkAsPaidModal';
 import MarkAsShippedModal from './MarkAsShippedModal';
 import usePaymentMethods from './usePaymentMethods';
+import Portal from './Portal'; // Import the new Portal component
 
 const inputClass =
   "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full text-center";
@@ -75,7 +76,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const [devices, setDevices] = useState([]);
   const [games, setGames] = useState([]);
 
-  const [showCreateInventory, setShowCreateInventory] = useState(false);
+  const [showCreateInventory, setShowCreateInventory].useState(false);
   const [showCreatePart, setShowCreatePart] = useState(false);
   const [pendingLineIndex, setPendingLineIndex] = useState(null);
 
@@ -629,145 +630,150 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-7xl relative flex flex-col h-[98vh]">
-        <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
-        <div className="flex items-center mb-4">
-          <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
-            Purchase Order Details
-          </h2>
-          {badge}
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: '75vh' }}>
-          {/* PO header fields (Vendor, Vendor Order #, Order Date) */}
-          {poHeaderFields}
-          {/* PO line items */}
-          {editMode ? lineItemsEditTable : lineItemsViewTable}
-          {/* Notes */}
-          <div className="mb-6">
-            <label className="block font-medium mb-1">Notes</label>
-            {editMode ? (
-              <textarea
-                className={inputClass}
-                value={formState.notes}
-                onChange={e => setFormState(f => ({ ...f, notes: e.target.value }))}
-              />
-            ) : <div className="whitespace-pre-line">{formState.notes}</div>}
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-7xl relative flex flex-col h-[98vh]">
+          <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+          <div className="flex items-center mb-4">
+            <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
+              Purchase Order Details
+            </h2>
+            {badge}
           </div>
-          {/* PO summary fields (Tax, Shipping, Fees, Subtotal, Total) */}
-          {poSummaryFields}
-          {/* Status History */}
-          <div className="mb-6">
-            <label className="block font-medium mb-1">Status History</label>
-            {statusHistory.length === 0 ? (
-              <div className="text-gray-400 text-sm">No status changes recorded yet.</div>
-            ) : (
-              <ul className="text-sm bg-gray-100 dark:bg-gray-700 rounded p-2 space-y-1 max-h-32 overflow-y-auto">
-                {statusHistory.map((entry, i) => (
-                  <li key={i}>
-                    <span className="font-semibold">{entry.status}</span>
-                    {" by "}
-                    <span>{entry.by}</span>
-                    {" on "}
-                    <span title={formatFriendlyDate(entry.at)}>{formatFriendlyDate(entry.at)}</span>
-                    {entry.note ? <>: <span className="italic">{entry.note}</span></> : null}
-                  </li>
-                ))}
-              </ul>
-            )}
+          <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: '75vh' }}>
+            {/* PO header fields (Vendor, Vendor Order #, Order Date) */}
+            {poHeaderFields}
+            {/* PO line items */}
+            {editMode ? lineItemsEditTable : lineItemsViewTable}
+            {/* Notes */}
+            <div className="mb-6">
+              <label className="block font-medium mb-1">Notes</label>
+              {editMode ? (
+                <textarea
+                  className={inputClass}
+                  value={formState.notes}
+                  onChange={e => setFormState(f => ({ ...f, notes: e.target.value }))}
+                />
+              ) : <div className="whitespace-pre-line">{formState.notes}</div>}
+            </div>
+            {/* PO summary fields (Tax, Shipping, Fees, Subtotal, Total) */}
+            {poSummaryFields}
+            {/* Status History */}
+            <div className="mb-6">
+              <label className="block font-medium mb-1">Status History</label>
+              {statusHistory.length === 0 ? (
+                <div className="text-gray-400 text-sm">No status changes recorded yet.</div>
+              ) : (
+                <ul className="text-sm bg-gray-100 dark:bg-gray-700 rounded p-2 space-y-1 max-h-32 overflow-y-auto">
+                  {statusHistory.map((entry, i) => (
+                    <li key={i}>
+                      <span className="font-semibold">{entry.status}</span>
+                      {" by "}
+                      <span>{entry.by}</span>
+                      {" on "}
+                      <span title={formatFriendlyDate(entry.at)}>{formatFriendlyDate(entry.at)}</span>
+                      {entry.note ? <>: <span className="italic">{entry.note}</span></> : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {/* Payment History */}
+            <div className="mb-6">
+              <label className="block font-medium mb-1">Payment History</label>
+              <PaymentHistory />
+            </div>
+            {/* Shipment History */}
+            <div className="mb-6">
+              <label className="block font-medium mb-1">Shipment History</label>
+              <ShipmentHistory />
+            </div>
           </div>
-          {/* Payment History */}
-          <div className="mb-6">
-            <label className="block font-medium mb-1">Payment History</label>
-            <PaymentHistory />
-          </div>
-          {/* Shipment History */}
-          <div className="mb-6">
-            <label className="block font-medium mb-1">Shipment History</label>
-            <ShipmentHistory />
-          </div>
-        </div>
-        <div className="flex justify-end gap-3 mt-5">
-          {canMarkPaid && (
-            <button
-              className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700"
-              onClick={() => setShowMarkPaid(true)}
-            >
-              Mark as Paid
-            </button>
-          )}
-          {canMarkShipped && (
-            <button
-              className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-              onClick={() => setShowMarkShipped(true)}
-            >
-              Mark as Shipped
-            </button>
-          )}
-          {canReceive && (
-            <button
-              className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
-              onClick={() => setShowReceiveModal(true)}
-            >
-              Receive
-            </button>
-          )}
-          {canComplete && (
-            <button
-              className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-900"
-              onClick={handleCompleteWorkOrder}
-            >
-              Complete Work Order
-            </button>
-          )}
-          {editMode ? (
-            <>
+          <div className="flex justify-end gap-3 mt-5">
+            {canMarkPaid && (
               <button
-                type="button"
-                className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
-                onClick={() => {
-                  setEditMode(false);
-                  setFormState({
-                    vendor: po.vendor,
-                    vendorOrderNumber: po.vendorOrderNumber || '',
-                    date: po.date?.toDate?.().toISOString().substr(0, 10) || '',
-                    notes: po.notes || '',
-                    lineItems: po.lineItems?.map((li, idx) => ({
-                      ...li,
-                      unitPrice: (typeof li.unitPrice === 'number' && li.unitPrice === 0) ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice),
-                      index: idx,
-                    })) || [],
-                    shippingCost: (typeof po.shippingCost === 'number' && po.shippingCost === 0) ? '' : (typeof po.shippingCost === 'number' ? po.shippingCost.toFixed(2) : po.shippingCost),
-                    otherFees: (typeof po.otherFees === 'number' && po.otherFees === 0) ? '' : (typeof po.otherFees === 'number' ? po.otherFees.toFixed(2) : po.otherFees),
-                    tax: (typeof po.tax === 'number' && po.tax === 0) ? '' : (typeof po.tax === 'number' ? po.tax.toFixed(2) : po.tax),
-                    status: po.status,
-                  });
-                }}
-              >Cancel
+                className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700"
+                onClick={() => setShowMarkPaid(true)}
+              >
+                Mark as Paid
               </button>
+            )}
+            {canMarkShipped && (
+              <button
+                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                onClick={() => setShowMarkShipped(true)}
+              >
+                Mark as Shipped
+              </button>
+            )}
+            {canReceive && (
+              <button
+                className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+                onClick={() => setShowReceiveModal(true)}
+              >
+                Receive
+              </button>
+            )}
+            {canComplete && (
+              <button
+                className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-900"
+                onClick={handleCompleteWorkOrder}
+              >
+                Complete Work Order
+              </button>
+            )}
+            {editMode ? (
+              <>
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
+                  onClick={() => {
+                    setEditMode(false);
+                    setFormState({
+                      vendor: po.vendor,
+                      vendorOrderNumber: po.vendorOrderNumber || '',
+                      date: po.date?.toDate?.().toISOString().substr(0, 10) || '',
+                      notes: po.notes || '',
+                      lineItems: po.lineItems?.map((li, idx) => ({
+                        ...li,
+                        unitPrice: (typeof li.unitPrice === 'number' && li.unitPrice === 0) ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice),
+                        index: idx,
+                      })) || [],
+                      shippingCost: (typeof po.shippingCost === 'number' && po.shippingCost === 0) ? '' : (typeof po.shippingCost === 'number' ? po.shippingCost.toFixed(2) : po.shippingCost),
+                      otherFees: (typeof po.otherFees === 'number' && po.otherFees === 0) ? '' : (typeof po.otherFees === 'number' ? po.otherFees.toFixed(2) : po.otherFees),
+                      tax: (typeof po.tax === 'number' && po.tax === 0) ? '' : (typeof po.tax === 'number' ? po.tax.toFixed(2) : po.tax),
+                      status: po.status,
+                    });
+                  }}
+                >Cancel
+                </button>
+                <button
+                  type="button"
+                  className="px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700"
+                  disabled={saving}
+                  onClick={saveEdits}
+                >{saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </>
+            ) : canEdit && (
               <button
                 type="button"
                 className="px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700"
-                disabled={saving}
-                onClick={saveEdits}
-              >{saving ? 'Saving...' : 'Save Changes'}
+                onClick={() => setEditMode(true)}
+              >Edit
               </button>
-            </>
-          ) : canEdit && (
+            )}
             <button
               type="button"
-              className="px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700"
-              onClick={() => setEditMode(true)}
-            >Edit
+              className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
+              onClick={onClose}
+            >Close
             </button>
-          )}
-          <button
-            type="button"
-            className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
-            onClick={onClose}
-          >Close
-          </button>
+          </div>
         </div>
+      </div>
+      {/* All modals are now wrapped in a Portal to isolate them from this component's CSS context */}
+      <Portal>
         {showReceiveModal && (
           <POReceiveModal
             po={po}
@@ -814,8 +820,8 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
             loading={savingShipment}
           />
         )}
-      </div>
-    </div>
+      </Portal>
+    </>
   );
 };
 
