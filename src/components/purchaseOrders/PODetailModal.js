@@ -76,7 +76,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const [devices, setDevices] = useState([]);
   const [games, setGames] = useState([]);
 
-  const [showCreateInventory, setShowCreateInventory].useState(false);
+  const [showCreateInventory, setShowCreateInventory] = useState(false);
   const [showCreatePart, setShowCreatePart] = useState(false);
   const [pendingLineIndex, setPendingLineIndex] = useState(null);
 
