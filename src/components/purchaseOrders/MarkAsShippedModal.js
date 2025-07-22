@@ -1,4 +1,3 @@
-//Comment
 import React, { useState } from 'react';
 
 const inputClass = "border border-gray-300 dark:border-gray-600 rounded px-2 sm:px-3 py-1 sm:py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-sm sm:text-base";
@@ -59,78 +58,80 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
         {/* Header */}
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 text-indigo-700 dark:text-indigo-300">Mark as Shipped</h2>
         
-        {/* Fields */}
-        <div className="flex-shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
-          <div>
-            <label className="block font-medium mb-1 text-sm sm:text-base">Date Shipped <span className="text-red-500">*</span></label>
-            <input
-              type="date"
-              className={inputClass}
-              value={dateShipped}
-              onChange={e => setDateShipped(e.target.value)}
-            />
-            {touched && !dateShipped && <div className="text-red-600 text-xs mt-1">Date is required.</div>}
+        {/* Scrollable body: fields + table */}
+        <div className="flex-1 min-h-0 overflow-auto">
+          {/* Fields */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+            <div>
+              <label className="block font-medium mb-1 text-sm sm:text-base">Date Shipped <span className="text-red-500">*</span></label>
+              <input
+                type="date"
+                className={inputClass}
+                value={dateShipped}
+                onChange={e => setDateShipped(e.target.value)}
+              />
+              {touched && !dateShipped && <div className="text-red-600 text-xs mt-1">Date is required.</div>}
+            </div>
+            <div>
+              <label className="block font-medium mb-1 text-sm sm:text-base">Tracking Number</label>
+              <input
+                type="text"
+                className={inputClass}
+                value={tracking}
+                onChange={e => setTracking(e.target.value)}
+                placeholder="Optional"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1 text-sm sm:text-base">Notes</label>
+              <textarea
+                className={inputClass}
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                rows={2}
+                placeholder="Optional"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block font-medium mb-1 text-sm sm:text-base">Tracking Number</label>
-            <input
-              type="text"
-              className={inputClass}
-              value={tracking}
-              onChange={e => setTracking(e.target.value)}
-              placeholder="Optional"
-            />
-          </div>
-          <div>
-            <label className="block font-medium mb-1 text-sm sm:text-base">Notes</label>
-            <textarea
-              className={inputClass}
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={2}
-              placeholder="Optional"
-            />
-          </div>
-        </div>
-        
-        {/* Table area - make flex-1 and scrollable */}
-        <div className="flex-1 min-h-0 border-t pt-4 sm:pt-6 overflow-auto">
-          <label className="block font-medium mb-3 sm:mb-4 text-sm sm:text-base lg:text-lg">Line Items Shipped</label>
-          <div>
-            <table className="min-w-full text-xs sm:text-sm lg:text-base border-collapse">
-              <thead className="sticky top-0 bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold">Description</th>
-                  <th className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold min-w-[100px]">Qty Ordered</th>
-                  <th className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold min-w-[120px]">Qty Shipped</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shippedQuantities.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3">{item.description}</td>
-                    <td className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">{item.quantity}</td>
-                    <td className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">
-                      <input
-                        type="number"
-                        className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-full max-w-[100px] mx-auto focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-center"
-                        value={item.shipped}
-                        min={0}
-                        max={item.max !== undefined ? item.max : item.quantity}
-                        onChange={e => updateShipped(idx, e.target.value)}
-                      />
-                      {touched && (Number(item.shipped) > (item.max !== undefined ? item.max : item.quantity) || Number(item.shipped) < 0) && (
-                        <div className="text-red-600 text-xs mt-1">0 ≤ Qty ≤ {item.max !== undefined ? item.max : item.quantity}</div>
-                      )}
-                    </td>
+          {/* Table */}
+          <div className="border-t pt-4 sm:pt-6">
+            <label className="block font-medium mb-3 sm:mb-4 text-sm sm:text-base lg:text-lg">Line Items Shipped</label>
+            <div>
+              <table className="min-w-full text-xs sm:text-sm lg:text-base border-collapse">
+                <thead className="sticky top-0 bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold">Description</th>
+                    <th className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold min-w-[100px]">Qty Ordered</th>
+                    <th className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold min-w-[120px]">Qty Shipped</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {shippedQuantities.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3">{item.description}</td>
+                      <td className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">{item.quantity}</td>
+                      <td className="border border-gray-300 dark:border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">
+                        <input
+                          type="number"
+                          className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-full max-w-[100px] mx-auto focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-center"
+                          value={item.shipped}
+                          min={0}
+                          max={item.max !== undefined ? item.max : item.quantity}
+                          onChange={e => updateShipped(idx, e.target.value)}
+                        />
+                        {touched && (Number(item.shipped) > (item.max !== undefined ? item.max : item.quantity) || Number(item.shipped) < 0) && (
+                          <div className="text-red-600 text-xs mt-1">0 ≤ Qty ≤ {item.max !== undefined ? item.max : item.quantity}</div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {touched && !shippedQuantities.some(q => Number(q.shipped) > 0) && (
+              <div className="text-red-600 text-xs sm:text-sm mt-2 font-medium">You must ship at least one item.</div>
+            )}
           </div>
-          {touched && !shippedQuantities.some(q => Number(q.shipped) > 0) && (
-            <div className="text-red-600 text-xs sm:text-sm mt-2 font-medium">You must ship at least one item.</div>
-          )}
         </div>
         
         {/* Action buttons always visible */}
