@@ -9,8 +9,8 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
   const [shippedQuantities, setShippedQuantities] = useState(
     lineItems.map(li => ({
       description: li.description,
-      shipped: '', // default blank
-      max: Number(li.quantity) - Number(li.shipped || 0) - Number(li.received || li.quantityReceived || 0), // not yet shipped/received
+      shipped: '',
+      max: Number(li.quantity) - Number(li.shipped || 0) - Number(li.received || li.quantityReceived || 0),
       lineIndex: li.index !== undefined ? li.index : undefined,
       id: li.id,
       category: li.category,
@@ -20,14 +20,12 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
   );
   const [touched, setTouched] = useState(false);
 
-  // Handle quantity input for each line item
   function updateShipped(idx, value) {
     setShippedQuantities(arr => arr.map((q, i) => i === idx ? { ...q, shipped: value } : q));
   }
 
   function handleSave() {
     setTouched(true);
-    // Must ship at least one item, all shipped quantities must be 0 or more and not exceed max
     const valid = shippedQuantities.some(q => Number(q.shipped) > 0)
       && shippedQuantities.every(q =>
         !isNaN(Number(q.shipped)) &&
@@ -56,10 +54,11 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-4 my-4 relative max-h-[95vh] flex flex-col overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-4 my-4 relative flex flex-col max-h-[95vh]">
+        {/* Header */}
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 text-indigo-700 dark:text-indigo-300">Mark as Shipped</h2>
         
-        {/* Form fields container */}
+        {/* Fields */}
         <div className="flex-shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
           <div>
             <label className="block font-medium mb-1 text-sm sm:text-base">Date Shipped <span className="text-red-500">*</span></label>
@@ -93,10 +92,10 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
           </div>
         </div>
         
-        {/* Table container with scroll */}
-        <div className="flex-1 min-h-0 border-t pt-4 sm:pt-6">
+        {/* Table area - make flex-1 and scrollable */}
+        <div className="flex-1 min-h-0 border-t pt-4 sm:pt-6 overflow-auto">
           <label className="block font-medium mb-3 sm:mb-4 text-sm sm:text-base lg:text-lg">Line Items Shipped</label>
-          <div className="overflow-auto max-h-full">
+          <div>
             <table className="min-w-full text-xs sm:text-sm lg:text-base border-collapse">
               <thead className="sticky top-0 bg-gray-50 dark:bg-gray-700">
                 <tr>
@@ -133,8 +132,8 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
           )}
         </div>
         
-        {/* Action buttons */}
-        <div className="flex-shrink-0 flex justify-end gap-3 sm:gap-4 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t">
+        {/* Action buttons always visible */}
+        <div className="flex-shrink-0 flex justify-end gap-3 sm:gap-4 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t bg-white dark:bg-gray-800">
           <button
             type="button"
             className="px-4 sm:px-6 py-2 sm:py-3 rounded text-sm sm:text-base bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 font-medium"
