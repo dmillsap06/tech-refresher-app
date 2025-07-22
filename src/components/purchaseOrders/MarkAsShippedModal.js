@@ -53,19 +53,19 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
 
   if (!open) return null;
 
-  // --- NEW JSX STRUCTURE (Rebuilt from scratch) ---
+  // --- NEW, SIMPLIFIED JSX STRUCTURE ---
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      {/* Modal container with fixed height and flex-col, like the working example */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-7xl mx-auto my-8 relative flex flex-col h-[95vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
+      {/* Set a max-height and let the content inside manage its own scrolling */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-7xl flex flex-col max-h-[90vh]">
         
         {/* Header Section (fixed, does not scroll) */}
-        <div className="flex-shrink-0">
-          <h2 className="text-2xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">Mark as Shipped</h2>
+        <div className="flex-shrink-0 p-6 border-b">
+          <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">Mark as Shipped</h2>
         </div>
 
         {/* Scrollable Content Section */}
-        <div className="flex-1 min-h-0 overflow-y-auto pr-4 -mr-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-6">
           {/* Input Fields */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div>
@@ -86,37 +86,39 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
           {/* Line Items Table */}
           <div className="border-t pt-6">
             <label className="block font-medium mb-4 text-lg">Line Items Shipped</label>
-            <table className="min-w-full text-sm border-collapse">
-              <thead className="sticky top-0 bg-gray-50 dark:bg-gray-700 z-10">
-                <tr>
-                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold">Description</th>
-                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-32">Qty Ordered</th>
-                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-40">Qty Shipped</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shippedQuantities.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{item.description}</td>
-                    <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{item.quantity}</td>
-                    <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">
-                      <input
-                        type="number"
-                        className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-center"
-                        value={item.shipped}
-                        min={0}
-                        max={item.max !== undefined ? item.max : item.quantity}
-                        onChange={e => updateShipped(idx, e.target.value)}
-                        placeholder="0"
-                      />
-                      {touched && (Number(item.shipped) > (item.max !== undefined ? item.max : item.quantity) || Number(item.shipped) < 0) && (
-                        <div className="text-red-600 text-xs mt-1">0 ≤ Qty ≤ {item.max !== undefined ? item.max : item.quantity}</div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+                <table className="min-w-full text-sm border-collapse">
+                <thead className="sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
+                    <tr>
+                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold">Description</th>
+                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-32">Qty Ordered</th>
+                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-40">Qty Shipped</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {shippedQuantities.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{item.description}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{item.quantity}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">
+                        <input
+                            type="number"
+                            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-center"
+                            value={item.shipped}
+                            min={0}
+                            max={item.max !== undefined ? item.max : item.quantity}
+                            onChange={e => updateShipped(idx, e.target.value)}
+                            placeholder="0"
+                        />
+                        {touched && (Number(item.shipped) > (item.max !== undefined ? item.max : item.quantity) || Number(item.shipped) < 0) && (
+                            <div className="text-red-600 text-xs mt-1">0 ≤ Qty ≤ {item.max !== undefined ? item.max : item.quantity}</div>
+                        )}
+                        </td>
+                    </tr>
+                    ))}
+                </tbody>
+                </table>
+            </div>
             {touched && !shippedQuantities.some(q => Number(q.shipped) > 0) && (
               <div className="text-red-600 text-sm mt-2 font-medium">You must ship at least one item.</div>
             )}
@@ -124,7 +126,7 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
         </div>
 
         {/* Action Buttons (fixed, does not scroll) */}
-        <div className="flex-shrink-0 flex justify-end gap-4 mt-6 pt-6 border-t">
+        <div className="flex-shrink-0 flex justify-end gap-4 p-6 border-t">
           <button
             type="button"
             className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 font-medium"
