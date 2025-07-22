@@ -53,19 +53,23 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
 
   if (!open) return null;
 
-  // --- NEW, SIMPLIFIED JSX STRUCTURE ---
+  // --- FINAL PROPOSED JSX STRUCTURE ---
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
-      {/* Set a max-height and let the content inside manage its own scrolling */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-7xl flex flex-col max-h-[90vh]">
+    // This outer div creates the backdrop and centers the modal.
+    // The `overflow-y-auto` here is the key: it makes the entire viewport scroll if the modal is too tall.
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto">
+      
+      {/* This is the modal itself. We give it a max-width but NO fixed height. 
+          It will grow as tall as its content needs, and the parent div will scroll. */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-7xl my-8">
         
-        {/* Header Section (fixed, does not scroll) */}
-        <div className="flex-shrink-0 p-6 border-b">
+        {/* Header Section */}
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">Mark as Shipped</h2>
         </div>
 
-        {/* Scrollable Content Section */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-6">
+        {/* Main Content Body */}
+        <div className="p-6">
           {/* Input Fields */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div>
@@ -84,23 +88,23 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
           </div>
 
           {/* Line Items Table */}
-          <div className="border-t pt-6">
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
             <label className="block font-medium mb-4 text-lg">Line Items Shipped</label>
             <div className="overflow-x-auto">
                 <table className="min-w-full text-sm border-collapse">
-                <thead className="sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
+                <thead className="bg-gray-50 dark:bg-gray-600">
                     <tr>
-                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold">Description</th>
-                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-32">Qty Ordered</th>
-                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-40">Qty Shipped</th>
+                    <th className="border border-gray-300 dark:border-gray-500 px-4 py-3 text-left font-semibold">Description</th>
+                    <th className="border border-gray-300 dark:border-gray-500 px-4 py-3 text-center font-semibold w-32">Qty Ordered</th>
+                    <th className="border border-gray-300 dark:border-gray-500 px-4 py-3 text-center font-semibold w-40">Qty Shipped</th>
                     </tr>
                 </thead>
                 <tbody>
                     {shippedQuantities.map((item, idx) => (
                     <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{item.description}</td>
-                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{item.quantity}</td>
-                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">
+                        <td className="border border-gray-300 dark:border-gray-500 px-4 py-2">{item.description}</td>
+                        <td className="border border-gray-300 dark:border-gray-500 px-4 py-2 text-center">{item.quantity}</td>
+                        <td className="border border-gray-300 dark:border-gray-500 px-4 py-2 text-center">
                         <input
                             type="number"
                             className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-center"
@@ -125,8 +129,8 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
           </div>
         </div>
 
-        {/* Action Buttons (fixed, does not scroll) */}
-        <div className="flex-shrink-0 flex justify-end gap-4 p-6 border-t">
+        {/* Action Buttons Footer */}
+        <div className="flex justify-end gap-4 p-6 border-t border-gray-200 dark:border-gray-700">
           <button
             type="button"
             className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 font-medium"
