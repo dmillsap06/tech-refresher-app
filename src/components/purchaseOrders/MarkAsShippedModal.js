@@ -3,7 +3,11 @@ import React, { useState } from 'react';
 const inputClass = "border border-gray-300 dark:border-gray-600 rounded px-2 sm:px-3 py-1 sm:py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-sm sm:text-base";
 
 export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, defaultDate, loading }) {
-  // --- STATE AND LOGIC (Unchanged) ---
+  // Add a step state to control the flow
+  const [step, setStep] = useState('ask-shipment-type');
+  const [shipAll, setShipAll] = useState(true);
+  
+  // --- EXISTING STATE AND LOGIC ---
   const [dateShipped, setDateShipped] = useState(defaultDate || new Date().toISOString().substring(0, 10));
   const [tracking, setTracking] = useState('');
   const [notes, setNotes] = useState('');
@@ -53,7 +57,53 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
 
   if (!open) return null;
 
-  // --- DEFINITIVE JSX STRUCTURE ---
+  // Step 1: Ask if this is a full or partial shipment
+  if (step === 'ask-shipment-type') {
+    const canFullyShip = shippedQuantities.every(item => item.max > 0);
+    
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-lg relative">
+          <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+          <h2 className="text-xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">Mark as Shipped</h2>
+          <p className="mb-6">Would you like to ship the entire order, or only some items?</p>
+          <div className="flex flex-col gap-3">
+            <button
+              className="px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-70"
+              onClick={() => {
+                setShipAll(true);
+                setStep('enter-details');
+                // Auto-populate all quantities with their maximum values
+                setShippedQuantities(shippedQuantities.map(item => ({
+                  ...item,
+                  shipped: item.max
+                })));
+              }}
+              disabled={!canFullyShip}
+            >
+              Ship All Items
+            </button>
+            <button
+              className="px-5 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700"
+              onClick={() => {
+                setShipAll(false);
+                setStep('enter-details');
+                // Reset quantities to empty for manual input
+                setShippedQuantities(shippedQuantities.map(item => ({
+                  ...item,
+                  shipped: ''
+                })));
+              }}
+            >
+              Ship Only Some Items
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 2: Enter shipping details and quantities
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       {/* Modal container with fixed height and flex layout */}
@@ -61,7 +111,9 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
         
         {/* Non-shrinking header */}
         <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">Mark as Shipped</h2>
+          <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
+            Mark as {shipAll ? 'Fully' : 'Partially'} Shipped
+          </h2>
         </div>
 
         {/* Scrollable content area */}
@@ -109,6 +161,7 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
                           max={item.max !== undefined ? item.max : item.quantity}
                           onChange={e => updateShipped(idx, e.target.value)}
                           placeholder="0"
+                          disabled={shipAll} // Disable editing if shipping all
                         />
                         {touched && (Number(item.shipped) > (item.max !== undefined ? item.max : item.quantity) || Number(item.shipped) < 0) && (
                           <div className="text-red-600 text-xs mt-1">0 ≤ Qty ≤ {item.max !== undefined ? item.max : item.quantity}</div>
@@ -127,6 +180,14 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
 
         {/* Non-shrinking footer */}
         <div className="flex-shrink-0 flex justify-end gap-4 p-6 border-t border-gray-200 dark:border-gray-700">
+          {step === 'enter-details' && (
+            <button
+              type="button"
+              className="px-6 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 font-medium"
+              onClick={() => setStep('ask-shipment-type')}
+              disabled={loading}
+            >Back</button>
+          )}
           <button
             type="button"
             className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 font-medium"
