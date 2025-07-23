@@ -3,9 +3,6 @@ import { doc, updateDoc, serverTimestamp, increment, getDoc } from 'firebase/fir
 import { db } from '../../firebase';
 import logError from '../../utils/logError';
 
-const inputClass =
-  "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
-
 // Helper to get max receivable for a line item, considering shipments
 function getMaxReceivable(li, po) {
   const totalShipped = getTotalShipped(li, po);

@@ -82,7 +82,8 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const [pendingLineIndex, setPendingLineIndex] = useState(null);
 
   const { methods: paymentMethods } = usePaymentMethods(userProfile.groupId);
-  const { carriers: shippingCarriers } = useShippingCarriers(userProfile.groupId);
+  // Using {} to prevent unused vars warning - we only need to import the hook for its functionality
+  useShippingCarriers(userProfile.groupId);
 
   useEffect(() => {
     const fetchCatalogs = async () => {
