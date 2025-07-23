@@ -216,8 +216,8 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
           >Cancel</button>
           <button
             type="button"
-            className={`px-8 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 ${loading || !dateShipped || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? item.max : item.quantity)) ? 'opacity-60' : ''}`}
-            disabled={loading || !dateShipped || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? item.max : item.quantity))}
+            className={`px-8 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 ${loading || !dateShipped || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity)) ? 'opacity-60' : ''}`}
+            disabled={loading || !dateShipped || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity))}
             onClick={handleSave}
           >{loading ? 'Saving...' : 'Save'}</button>
         </div>
