@@ -30,43 +30,43 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
     setShippedQuantities(arr => arr.map((q, i) => i === idx ? { ...q, shipped: value } : q));
   }
 
-  function handleSave() {
-    setTouched(true);
-    errorReported.current = false;
+function handleSave() {
+  setTouched(true);
+  errorReported.current = false;
+  
+  // Validation including tracking number
+  const valid = shippedQuantities.some(q => Number(q.shipped) > 0)
+    && shippedQuantities.every(q =>
+      !isNaN(Number(q.shipped)) &&
+      Number(q.shipped) >= 0 &&
+      Number(q.shipped) <= (q.max !== undefined ? q.max : q.quantity)
+    );
     
-    // Validation including tracking number
-    const valid = shippedQuantities.some(q => Number(q.shipped) > 0)
-      && shippedQuantities.every(q =>
-        !isNaN(Number(q.shipped)) &&
-        Number(q.shipped) >= 0 &&
-        Number(q.shipped) <= (q.max !== undefined ? q.max : q.quantity)
-      );
-      
-    if (!dateShipped || !tracking || !valid) return;
-    
-    try {
-      onSave({
-        dateShipped,
-        tracking,
-        notes,
-        shippedLineItems: shippedQuantities.map((q, idx) => ({
-          index: idx,
-          description: q.description,
-          shipped: Number(q.shipped) || 0,
-          lineIndex: q.lineIndex,
-          id: q.id,
-          category: q.category,
-          linkedId: q.linkedId,
-          quantity: q.quantity
-        }))
-      });
-    } catch (err) {
-      if (!errorReported.current) {
-        console.error('MarkAsShippedModal-Save', err);
-        errorReported.current = true;
-      }
+  if (!dateShipped || !tracking || !valid) return;
+  
+  try {
+    onSave({
+      dateShipped,
+      tracking,
+      notes: notes || "",
+      shippedLineItems: shippedQuantities.map((q, idx) => ({
+        index: idx,
+        description: q.description || "Unnamed item",
+        shipped: Number(q.shipped) || 0,
+        lineIndex: typeof q.lineIndex === 'number' ? q.lineIndex : null,
+        id: q.id || null,
+        category: q.category || null,
+        linkedId: q.linkedId || null,
+        quantity: Number(q.quantity) || 0
+      }))
+    });
+  } catch (err) {
+    if (!errorReported.current) {
+      console.error('MarkAsShippedModal-Save', err);
+      errorReported.current = true;
     }
   }
+}
 
   if (!open) return null;
 

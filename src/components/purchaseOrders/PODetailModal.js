@@ -323,16 +323,31 @@ async function handleMarkShipped(shipmentData) {
     let newStatus = 'Partially Shipped';
     if (newTotalShipped >= totalQty && totalQty > 0) newStatus = 'Shipped';
 
+    // Clean up the shipment data to ensure no undefined values
+    const cleanShipmentData = {
+      dateShipped: shipmentData.dateShipped || new Date().toISOString().substring(0, 10),
+      tracking: shipmentData.tracking || "",
+      notes: shipmentData.notes || "",
+      shippedLineItems: shipmentData.shippedLineItems.map(item => ({
+        index: typeof item.index === 'number' ? item.index : 0,
+        description: item.description || "Unnamed item",
+        shipped: Number(item.shipped) || 0,
+        lineIndex: typeof item.lineIndex === 'number' ? item.lineIndex : null,
+        id: item.id || null,
+        category: item.category || null,
+        linkedId: item.linkedId || null,
+        quantity: Number(item.quantity) || 0
+      })),
+      recordedBy: userProfile.displayName || userProfile.email || "Unknown user",
+      recordedAt: new Date().toISOString(),
+    };
+
     await updateDoc(doc(db, 'purchase_orders', po.id), {
-      shipments: arrayUnion({
-        ...shipmentData,
-        recordedBy: userProfile.displayName || userProfile.email,
-        recordedAt: new Date().toISOString(),
-      }),
+      shipments: arrayUnion(cleanShipmentData),
       status: newStatus,
       statusHistory: arrayUnion({
         status: newStatus,
-        by: userProfile.displayName || userProfile.email,
+        by: userProfile.displayName || userProfile.email || "Unknown user",
         at: new Date().toISOString(),
         note: shipmentData.notes || `Tracking: ${shipmentData.tracking}`
       })
