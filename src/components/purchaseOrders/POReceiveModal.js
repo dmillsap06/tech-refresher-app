@@ -26,6 +26,7 @@ function getTotalShipped(li, po) {
         .filter(sli =>
           (sli.id && li.id && sli.id === li.id) ||
           (sli.linkedId && li.linkedId && sli.linkedId === li.linkedId) ||
+          (sli.lineIndex !== undefined && li.index !== undefined && sli.lineIndex === li.index) ||
           (sli.description && sli.description === li.description)
         )
         .reduce((s2, sli) => s2 + Number(sli.shipped || 0), 0)
@@ -82,7 +83,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
 
   if (!allLinked) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-lg relative">
           <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
           <h2 className="text-xl font-bold mb-4 text-red-700 dark:text-red-300">Cannot Receive</h2>
@@ -102,7 +103,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
   if (step === 'ask-partial') {
     const canFullyReceive = po.lineItems.every(li => getMaxReceivable(li, po) > 0);
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-lg relative">
           <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
           <h2 className="text-xl font-bold mb-4 text-green-700 dark:text-green-300">Receive Purchase Order</h2>
@@ -236,80 +237,146 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
     }
   };
 
+  // Shows shipment details for each line item
+  const ShipmentsList = ({ lineItem }) => {
+    const relevantShipments = (po.shipments || [])
+      .filter(ship => 
+        ship.shippedLineItems?.some(sli => 
+          (sli.id && lineItem.id && sli.id === lineItem.id) ||
+          (sli.linkedId && lineItem.linkedId && sli.linkedId === lineItem.linkedId) ||
+          (sli.lineIndex !== undefined && lineItem.index !== undefined && sli.lineIndex === lineItem.index) ||
+          (sli.description && sli.description === lineItem.description)
+        )
+      );
+
+    if (relevantShipments.length === 0) return <span className="text-gray-400">No shipments</span>;
+
+    return (
+      <div className="text-xs text-gray-600 dark:text-gray-300">
+        {relevantShipments.map((ship, idx) => {
+          const shippedQty = ship.shippedLineItems
+            .filter(sli => 
+              (sli.id && lineItem.id && sli.id === lineItem.id) ||
+              (sli.linkedId && lineItem.linkedId && sli.linkedId === lineItem.linkedId) ||
+              (sli.lineIndex !== undefined && lineItem.index !== undefined && sli.lineIndex === lineItem.index) ||
+              (sli.description && sli.description === lineItem.description)
+            )
+            .reduce((sum, sli) => sum + Number(sli.shipped || 0), 0);
+
+          return (
+            <div key={idx} className="mb-1">
+              <span>{shippedQty} pcs on {new Date(ship.dateShipped).toLocaleDateString()}</span>
+              {ship.carrier && ship.carrier.name && (
+                <> via {ship.carrier.name}</>
+              )}
+              {ship.tracking && (
+                <> (tracking: {ship.tracking})</>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-2xl relative">
-        <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
-        <h2 className="text-xl font-bold mb-3 text-green-700 dark:text-green-300">Receive Purchase Order</h2>
-        <p className="mb-4">Enter the quantities you have received for each item:</p>
-        <table className="min-w-full border rounded mb-3">
-          <thead>
-            <tr>
-              <th className="px-2 py-1">Description</th>
-              <th className="px-2 py-1 text-center">Ordered</th>
-              <th className="px-2 py-1 text-center">Shipped</th>
-              <th className="px-2 py-1 text-center">Prev. Received</th>
-              <th className="px-2 py-1 text-center">Receive Now</th>
-              <th className="px-2 py-1">Linked Catalog Item</th>
-            </tr>
-          </thead>
-          <tbody>
-            {po.lineItems.map((li, idx) => {
-              const maxReceivable = getMaxReceivable(li, po);
-              const totalShipped = getTotalShipped(li, po);
-              return (
-                <tr key={idx}>
-                  <td>{li.description}</td>
-                  <td className="text-center">{li.quantity}</td>
-                  <td className="text-center">{totalShipped}</td>
-                  <td className="text-center">{li.quantityReceived || 0}</td>
-                  <td className="text-center">
-                    {receiveAll ? (
-                      <input
-                        type="number"
-                        className={inputClass + " w-24 text-center"}
-                        value={quantities[idx]}
-                        min={0}
-                        max={maxReceivable}
-                        disabled
-                      />
-                    ) : (
-                      <input
-                        type="number"
-                        className={inputClass + " w-24 text-center"}
-                        value={quantities[idx]}
-                        min={0}
-                        max={maxReceivable}
-                        onChange={handleQtyChange(idx)}
-                        placeholder={`Max: ${maxReceivable}`}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                      />
-                    )}
-                  </td>
-                  <td>
-                    {linkedNames[idx] || <span className="text-red-500">Not linked</span>}
-                  </td>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-5xl flex flex-col" style={{ height: '90vh', maxHeight: '90vh' }}>
+        <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-2xl font-bold text-green-700 dark:text-green-300">
+            Receive {receiveAll ? 'All' : 'Partial'} Items
+          </h2>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6" style={{ minHeight: '0px' }}>
+          <div className="mb-4">
+            <p>Enter the quantities you have received for each item:</p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm border-collapse">
+              <thead className="bg-gray-100 dark:bg-gray-700">
+                <tr>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold">Description</th>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-24">Ordered</th>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-32">Shipped</th>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-32">Previously Received</th>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-40">Receive Now</th>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold">Shipment Details</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <div className="flex justify-end gap-3 mt-5">
+              </thead>
+              <tbody>
+                {po.lineItems.map((li, idx) => {
+                  const maxReceivable = getMaxReceivable(li, po);
+                  const totalShipped = getTotalShipped(li, po);
+                  return (
+                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">
+                        <div>{li.description}</div>
+                        <div className="text-xs text-gray-500">{linkedNames[idx]}</div>
+                      </td>
+                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{li.quantity}</td>
+                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{totalShipped}</td>
+                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{li.quantityReceived || 0}</td>
+                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">
+                        {receiveAll ? (
+                          <input
+                            type="number"
+                            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-center"
+                            value={quantities[idx]}
+                            min={0}
+                            max={maxReceivable}
+                            disabled
+                          />
+                        ) : (
+                          <input
+                            type="number"
+                            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-center"
+                            value={quantities[idx]}
+                            min={0}
+                            max={maxReceivable}
+                            onChange={handleQtyChange(idx)}
+                            placeholder={`Max: ${maxReceivable}`}
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                          />
+                        )}
+                        {maxReceivable <= 0 && !receiveAll && (
+                          <div className="text-red-500 text-xs mt-1">Cannot receive more</div>
+                        )}
+                      </td>
+                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">
+                        <ShipmentsList lineItem={li} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="flex-shrink-0 flex justify-end gap-4 p-6 border-t border-gray-200 dark:border-gray-700">
+          {step === 'enter-qty' && (
+            <button
+              type="button"
+              className="px-6 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 font-medium"
+              onClick={() => setStep('ask-partial')}
+              disabled={saving}
+            >Back</button>
+          )}
           <button
             type="button"
-            className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
+            className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 font-medium"
             onClick={onClose}
             disabled={saving}
           >Cancel</button>
           <button
             type="button"
-            className="px-5 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700"
-            disabled={saving}
+            className={`px-8 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700 ${saving ? 'opacity-60' : ''}`}
+            disabled={saving || quantities.every(q => Number(q) <= 0)}
             onClick={handleReceive}
-          >
-            {saving ? "Saving..." : "Submit Receive"}
-          </button>
+          >{saving ? 'Saving...' : 'Submit Receive'}</button>
         </div>
       </div>
     </div>
