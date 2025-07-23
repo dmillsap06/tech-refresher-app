@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 const inputClass = "border border-gray-300 dark:border-gray-600 rounded px-2 sm:px-3 py-1 sm:py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-sm sm:text-base";
 
@@ -6,6 +6,7 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
   // Add a step state to control the flow
   const [step, setStep] = useState('ask-shipment-type');
   const [shipAll, setShipAll] = useState(true);
+  const errorReported = useRef(false);
   
   // --- EXISTING STATE AND LOGIC ---
   const [dateShipped, setDateShipped] = useState(defaultDate || new Date().toISOString().substring(0, 10));
@@ -31,28 +32,40 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
 
   function handleSave() {
     setTouched(true);
+    errorReported.current = false;
+    
+    // Validation including tracking number
     const valid = shippedQuantities.some(q => Number(q.shipped) > 0)
       && shippedQuantities.every(q =>
         !isNaN(Number(q.shipped)) &&
         Number(q.shipped) >= 0 &&
         Number(q.shipped) <= (q.max !== undefined ? q.max : q.quantity)
       );
-    if (!dateShipped || !valid) return;
-    onSave({
-      dateShipped,
-      tracking,
-      notes,
-      shippedLineItems: shippedQuantities.map((q, idx) => ({
-        index: idx,
-        description: q.description,
-        shipped: Number(q.shipped) || 0,
-        lineIndex: q.lineIndex,
-        id: q.id,
-        category: q.category,
-        linkedId: q.linkedId,
-        quantity: q.quantity
-      }))
-    });
+      
+    if (!dateShipped || !tracking || !valid) return;
+    
+    try {
+      onSave({
+        dateShipped,
+        tracking,
+        notes,
+        shippedLineItems: shippedQuantities.map((q, idx) => ({
+          index: idx,
+          description: q.description,
+          shipped: Number(q.shipped) || 0,
+          lineIndex: q.lineIndex,
+          id: q.id,
+          category: q.category,
+          linkedId: q.linkedId,
+          quantity: q.quantity
+        }))
+      });
+    } catch (err) {
+      if (!errorReported.current) {
+        console.error('MarkAsShippedModal-Save', err);
+        errorReported.current = true;
+      }
+    }
   }
 
   if (!open) return null;
@@ -126,8 +139,15 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
               {touched && !dateShipped && <div className="text-red-600 text-xs mt-1">Date is required.</div>}
             </div>
             <div>
-              <label className="block font-medium mb-1">Tracking Number</label>
-              <input type="text" className={inputClass} value={tracking} onChange={e => setTracking(e.target.value)} placeholder="Optional" />
+              <label className="block font-medium mb-1">Tracking Number <span className="text-red-500">*</span></label>
+              <input 
+                type="text" 
+                className={inputClass} 
+                value={tracking} 
+                onChange={e => setTracking(e.target.value)} 
+                placeholder="Required" 
+              />
+              {touched && !tracking && <div className="text-red-600 text-xs mt-1">Tracking number is required.</div>}
             </div>
             <div>
               <label className="block font-medium mb-1">Notes</label>
@@ -196,8 +216,8 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
           >Cancel</button>
           <button
             type="button"
-            className={`px-8 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 ${loading || !dateShipped || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity)) ? 'opacity-60' : ''}`}
-            disabled={loading || !dateShipped || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity))}
+            className={`px-8 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 ${loading || !dateShipped || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? item.max : item.quantity)) ? 'opacity-60' : ''}`}
+            disabled={loading || !dateShipped || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? item.max : item.quantity))}
             onClick={handleSave}
           >{loading ? 'Saving...' : 'Save'}</button>
         </div>

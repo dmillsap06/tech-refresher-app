@@ -309,41 +309,46 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
 
   // ---- SHIPMENT HISTORY ----
 
-  async function handleMarkShipped(shipmentData) {
-    setSavingShipment(true);
-    try {
-      const totalQty = formState.lineItems.reduce((sum, li) => sum + Number(li.quantity), 0);
-      const alreadyShippedQty = (po.shipments || []).reduce(
-        (sum, s) => sum + s.shippedLineItems?.reduce((s2, sli) => s2 + Number(sli.shipped || 0), 0
-      ), 0);
-      const newThisShipmentQty = shipmentData.shippedLineItems.reduce((sum, sli) => sum + Number(sli.shipped || 0), 0);
-      const newTotalShipped = alreadyShippedQty + newThisShipmentQty;
+async function handleMarkShipped(shipmentData) {
+  setSavingShipment(true);
+  errorReported.current = false;
+  try {
+    const totalQty = formState.lineItems.reduce((sum, li) => sum + Number(li.quantity), 0);
+    const alreadyShippedQty = (po.shipments || []).reduce(
+      (sum, s) => sum + s.shippedLineItems?.reduce((s2, sli) => s2 + Number(sli.shipped || 0), 0
+    ), 0);
+    const newThisShipmentQty = shipmentData.shippedLineItems.reduce((sum, sli) => sum + Number(sli.shipped || 0), 0);
+    const newTotalShipped = alreadyShippedQty + newThisShipmentQty;
 
-      let newStatus = 'Partially Shipped';
-      if (newTotalShipped >= totalQty && totalQty > 0) newStatus = 'Shipped';
+    let newStatus = 'Partially Shipped';
+    if (newTotalShipped >= totalQty && totalQty > 0) newStatus = 'Shipped';
 
-      await updateDoc(doc(db, 'purchase_orders', po.id), {
-        shipments: arrayUnion({
-          ...shipmentData,
-          recordedBy: userProfile.displayName || userProfile.email,
-          recordedAt: new Date().toISOString(),
-        }),
+    await updateDoc(doc(db, 'purchase_orders', po.id), {
+      shipments: arrayUnion({
+        ...shipmentData,
+        recordedBy: userProfile.displayName || userProfile.email,
+        recordedAt: new Date().toISOString(),
+      }),
+      status: newStatus,
+      statusHistory: arrayUnion({
         status: newStatus,
-        statusHistory: arrayUnion({
-          status: newStatus,
-          by: userProfile.displayName || userProfile.email,
-          at: new Date().toISOString(),
-          note: shipmentData.notes || (shipmentData.tracking ? `Tracking: ${shipmentData.tracking}` : '')
-        })
-      });
-      showNotification('Shipment recorded!', 'success');
-      setShowMarkShipped(false);
-    } catch (err) {
-      showNotification('Failed to record shipment', 'error');
-    } finally {
-      setSavingShipment(false);
+        by: userProfile.displayName || userProfile.email,
+        at: new Date().toISOString(),
+        note: shipmentData.notes || `Tracking: ${shipmentData.tracking}`
+      })
+    });
+    showNotification('Shipment recorded!', 'success');
+    setShowMarkShipped(false);
+  } catch (err) {
+    if (!errorReported.current) {
+      logError('PODetailModal-MarkShipped', err);
+      showNotification('Failed to record shipment: ' + err.message, 'error');
+      errorReported.current = true;
     }
+  } finally {
+    setSavingShipment(false);
   }
+}
 
   function ShipmentHistory() {
     if (!po.shipments || po.shipments.length === 0) return <div>No shipments recorded for this PO.</div>;
