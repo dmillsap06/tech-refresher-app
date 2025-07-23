@@ -1,15 +1,22 @@
 import React, { useState, useRef } from 'react';
+import useShippingCarriers from './useShippingCarriers';
 
 const inputClass = "border border-gray-300 dark:border-gray-600 rounded px-2 sm:px-3 py-1 sm:py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-sm sm:text-base";
 
-export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, defaultDate, loading }) {
-  // Add a step state to control the flow
+export default function MarkAsShippedModal({
+  open,
+  onClose,
+  onSave,
+  lineItems,
+  defaultDate,
+  loading,
+  groupId,
+}) {
+  const { carriers, loading: carriersLoading } = useShippingCarriers(groupId);
   const [step, setStep] = useState('ask-shipment-type');
   const [shipAll, setShipAll] = useState(true);
-  const errorReported = useRef(false);
-  
-  // --- EXISTING STATE AND LOGIC ---
   const [dateShipped, setDateShipped] = useState(defaultDate || new Date().toISOString().substring(0, 10));
+  const [carrierId, setCarrierId] = useState('');
   const [tracking, setTracking] = useState('');
   const [notes, setNotes] = useState('');
   const [shippedQuantities, setShippedQuantities] = useState(
@@ -25,55 +32,53 @@ export default function MarkAsShippedModal({ open, onClose, onSave, lineItems, d
     }))
   );
   const [touched, setTouched] = useState(false);
+  const errorReported = useRef(false);
 
   function updateShipped(idx, value) {
     setShippedQuantities(arr => arr.map((q, i) => i === idx ? { ...q, shipped: value } : q));
   }
 
-function handleSave() {
-  setTouched(true);
-  errorReported.current = false;
-  
-  // Validation including tracking number
-  const valid = shippedQuantities.some(q => Number(q.shipped) > 0)
-    && shippedQuantities.every(q =>
-      !isNaN(Number(q.shipped)) &&
-      Number(q.shipped) >= 0 &&
-      Number(q.shipped) <= (q.max !== undefined ? q.max : q.quantity)
-    );
-    
-  if (!dateShipped || !tracking || !valid) return;
-  
-  try {
-    onSave({
-      dateShipped,
-      tracking,
-      notes: notes || "",
-      shippedLineItems: shippedQuantities.map((q, idx) => ({
-        index: idx,
-        description: q.description || "Unnamed item",
-        shipped: Number(q.shipped) || 0,
-        lineIndex: typeof q.lineIndex === 'number' ? q.lineIndex : null,
-        id: q.id || null,
-        category: q.category || null,
-        linkedId: q.linkedId || null,
-        quantity: Number(q.quantity) || 0
-      }))
-    });
-  } catch (err) {
-    if (!errorReported.current) {
-      console.error('MarkAsShippedModal-Save', err);
-      errorReported.current = true;
+  function handleSave() {
+    setTouched(true);
+    const valid = shippedQuantities.some(q => Number(q.shipped) > 0)
+      && shippedQuantities.every(q =>
+        !isNaN(Number(q.shipped)) &&
+        Number(q.shipped) >= 0 &&
+        Number(q.shipped) <= (q.max !== undefined ? q.max : q.quantity)
+      );
+    if (!dateShipped || !carrierId || !tracking || !valid) return;
+
+    const carrierObj = carriers.find(c => c.id === carrierId);
+    try {
+      onSave({
+        dateShipped,
+        carrier: carrierObj ? { id: carrierObj.id, name: carrierObj.name } : null,
+        tracking,
+        notes,
+        shippedLineItems: shippedQuantities.map((q, idx) => ({
+          index: idx,
+          description: q.description || "Unnamed item",
+          shipped: Number(q.shipped) || 0,
+          lineIndex: typeof q.lineIndex === 'number' ? q.lineIndex : null,
+          id: q.id || null,
+          category: q.category || null,
+          linkedId: q.linkedId || null,
+          quantity: Number(q.quantity) || 0
+        }))
+      });
+    } catch (err) {
+      if (!errorReported.current) {
+        console.error('MarkAsShippedModal-Save', err);
+        errorReported.current = true;
+      }
     }
   }
-}
 
   if (!open) return null;
 
   // Step 1: Ask if this is a full or partial shipment
   if (step === 'ask-shipment-type') {
     const canFullyShip = shippedQuantities.every(item => item.max > 0);
-    
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-lg relative">
@@ -86,7 +91,6 @@ function handleSave() {
               onClick={() => {
                 setShipAll(true);
                 setStep('enter-details');
-                // Auto-populate all quantities with their maximum values
                 setShippedQuantities(shippedQuantities.map(item => ({
                   ...item,
                   shipped: item.max
@@ -101,7 +105,6 @@ function handleSave() {
               onClick={() => {
                 setShipAll(false);
                 setStep('enter-details');
-                // Reset quantities to empty for manual input
                 setShippedQuantities(shippedQuantities.map(item => ({
                   ...item,
                   shipped: ''
@@ -119,19 +122,13 @@ function handleSave() {
   // Step 2: Enter shipping details and quantities
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      {/* Modal container with fixed height and flex layout */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-7xl flex flex-col" style={{ height: '90vh', maxHeight: '90vh' }}>
-        
-        {/* Non-shrinking header */}
         <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
             Mark as {shipAll ? 'Fully' : 'Partially'} Shipped
           </h2>
         </div>
-
-        {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto p-6" style={{ minHeight: '0px' }}>
-          {/* Input Fields */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div>
               <label className="block font-medium mb-1">Date Shipped <span className="text-red-500">*</span></label>
@@ -139,13 +136,27 @@ function handleSave() {
               {touched && !dateShipped && <div className="text-red-600 text-xs mt-1">Date is required.</div>}
             </div>
             <div>
+              <label className="block font-medium mb-1">Carrier <span className="text-red-500">*</span></label>
+              {carriersLoading ? (
+                <div>Loading carriers...</div>
+              ) : (
+                <select className={inputClass} value={carrierId} onChange={e => setCarrierId(e.target.value)}>
+                  <option value="">Select a carrier</option>
+                  {carriers.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
+              {touched && !carrierId && <div className="text-red-600 text-xs mt-1">Carrier is required.</div>}
+            </div>
+            <div>
               <label className="block font-medium mb-1">Tracking Number <span className="text-red-500">*</span></label>
-              <input 
-                type="text" 
-                className={inputClass} 
-                value={tracking} 
-                onChange={e => setTracking(e.target.value)} 
-                placeholder="Required" 
+              <input
+                type="text"
+                className={inputClass}
+                value={tracking}
+                onChange={e => setTracking(e.target.value)}
+                placeholder="Required"
               />
               {touched && !tracking && <div className="text-red-600 text-xs mt-1">Tracking number is required.</div>}
             </div>
@@ -154,8 +165,6 @@ function handleSave() {
               <textarea className={inputClass} value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Optional" />
             </div>
           </div>
-
-          {/* Line Items Table */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
             <label className="block font-medium mb-4 text-lg">Line Items Shipped</label>
             <div className="overflow-x-auto">
@@ -181,7 +190,7 @@ function handleSave() {
                           max={item.max !== undefined ? item.max : item.quantity}
                           onChange={e => updateShipped(idx, e.target.value)}
                           placeholder="0"
-                          disabled={shipAll} // Disable editing if shipping all
+                          disabled={shipAll}
                         />
                         {touched && (Number(item.shipped) > (item.max !== undefined ? item.max : item.quantity) || Number(item.shipped) < 0) && (
                           <div className="text-red-600 text-xs mt-1">0 ≤ Qty ≤ {item.max !== undefined ? item.max : item.quantity}</div>
@@ -197,8 +206,6 @@ function handleSave() {
             )}
           </div>
         </div>
-
-        {/* Non-shrinking footer */}
         <div className="flex-shrink-0 flex justify-end gap-4 p-6 border-t border-gray-200 dark:border-gray-700">
           {step === 'enter-details' && (
             <button
@@ -216,8 +223,8 @@ function handleSave() {
           >Cancel</button>
           <button
             type="button"
-            className={`px-8 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 ${loading || !dateShipped || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity)) ? 'opacity-60' : ''}`}
-            disabled={loading || !dateShipped || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity))}
+            className={`px-8 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 ${loading || !dateShipped || !carrierId || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity)) ? 'opacity-60' : ''}`}
+            disabled={loading || !dateShipped || !carrierId || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity))}
             onClick={handleSave}
           >{loading ? 'Saving...' : 'Save'}</button>
         </div>
