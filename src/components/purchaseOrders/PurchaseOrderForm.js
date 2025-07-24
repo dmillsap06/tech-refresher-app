@@ -285,27 +285,29 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-7xl relative flex flex-col h-[95vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4 mb-5">
-          <h2 className="text-xl font-bold text-indigo-700 dark:text-indigo-300">New Purchase Order</h2>
-          <button 
-            onClick={onClose} 
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            aria-label="Close"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-7xl relative flex flex-col" style={{ height: '90vh', maxHeight: '90vh' }}>
+        {/* Header - Fixed */}
+        <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-indigo-700 dark:text-indigo-300">New Purchase Order</h2>
+            <button 
+              onClick={onClose} 
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              aria-label="Close"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
         
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          {/* Main Content Area - Scrollable */}
-          <div className="flex-1 overflow-y-auto pr-2">
+        {/* Main Content Area - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6" style={{ minHeight: '0px' }}>
+          <form id="po-form" onSubmit={handleSubmit} className="space-y-6">
             {/* Vendor, Vendor Order #, and Date on one row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Vendor <span className="text-red-500">*</span>
@@ -348,7 +350,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
             </div>
             
             {/* Notes */}
-            <div className="mb-5">
+            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Notes
               </label>
@@ -362,7 +364,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
             </div>
             
             {/* Line Items Section */}
-            <div className="mb-5">
+            <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Line Items <span className="text-red-500">*</span>
@@ -485,7 +487,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                                       value={item.linkedId || ''}
                                       onChange={e => handleLinkSelect(idx, e.target.value)}
                                       required
-                                      size={Math.min(filteredCatalog.length + 2, 6)}
+                                      size={Math.min(filteredCatalog.length + 2, 4)} // Limit height
                                     >
                                       <option value="" disabled>
                                         {isLoading
@@ -535,7 +537,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
             </div>
             
             {/* Costs Section - Two columns on larger screens */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Additional Costs</h3>
                 <div className="space-y-4">
@@ -625,69 +627,70 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                 </div>
               </div>
             </div>
-          </div>
-          
-          {/* Footer with action buttons */}
-          <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-gray-200 dark:border-gray-700">
-            <button 
-              type="button" 
-              className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" 
-              onClick={onClose}
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              className="px-5 py-2 rounded-md bg-indigo-600 text-white font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors" 
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Saving...
-                </>
-              ) : "Save Purchase Order"}
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
         
-        {/* Add New Modals */}
-        {showCreateModal.open && showCreateModal.category === "Part" && (
-          <CreatePartModal
-            userProfile={userProfile}
-            onCreated={item => handleCreatedCatalogItem("Part", item)}
-            onClose={() => setShowCreateModal({ open: false, category: null, lineIdx: null })}
-            showNotification={showNotification}
-          />
-        )}
-        {showCreateModal.open && showCreateModal.category === "Accessory" && (
-          <CreateAccessoryModal
-            userProfile={userProfile}
-            onCreated={item => handleCreatedCatalogItem("Accessory", item)}
-            onClose={() => setShowCreateModal({ open: false, category: null, lineIdx: null })}
-            showNotification={showNotification}
-          />
-        )}
-        {showCreateModal.open && showCreateModal.category === "Device" && (
-          <CreateDeviceModal
-            userProfile={userProfile}
-            onCreated={item => handleCreatedCatalogItem("Device", item)}
-            onClose={() => setShowCreateModal({ open: false, category: null, lineIdx: null })}
-            showNotification={showNotification}
-          />
-        )}
-        {showCreateModal.open && showCreateModal.category === "Game" && (
-          <CreateGameModal
-            userProfile={userProfile}
-            onCreated={item => handleCreatedCatalogItem("Game", item)}
-            onClose={() => setShowCreateModal({ open: false, category: null, lineIdx: null })}
-            showNotification={showNotification}
-          />
-        )}
+        {/* Footer with action buttons - Fixed */}
+        <div className="flex-shrink-0 flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+          <button 
+            type="button" 
+            className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" 
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit"
+            form="po-form"
+            className="px-5 py-2 rounded-md bg-indigo-600 text-white font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors" 
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+              </>
+            ) : "Save Purchase Order"}
+          </button>
+        </div>
       </div>
+      
+      {/* Add New Modals */}
+      {showCreateModal.open && showCreateModal.category === "Part" && (
+        <CreatePartModal
+          userProfile={userProfile}
+          onCreated={item => handleCreatedCatalogItem("Part", item)}
+          onClose={() => setShowCreateModal({ open: false, category: null, lineIdx: null })}
+          showNotification={showNotification}
+        />
+      )}
+      {showCreateModal.open && showCreateModal.category === "Accessory" && (
+        <CreateAccessoryModal
+          userProfile={userProfile}
+          onCreated={item => handleCreatedCatalogItem("Accessory", item)}
+          onClose={() => setShowCreateModal({ open: false, category: null, lineIdx: null })}
+          showNotification={showNotification}
+        />
+      )}
+      {showCreateModal.open && showCreateModal.category === "Device" && (
+        <CreateDeviceModal
+          userProfile={userProfile}
+          onCreated={item => handleCreatedCatalogItem("Device", item)}
+          onClose={() => setShowCreateModal({ open: false, category: null, lineIdx: null })}
+          showNotification={showNotification}
+        />
+      )}
+      {showCreateModal.open && showCreateModal.category === "Game" && (
+        <CreateGameModal
+          userProfile={userProfile}
+          onCreated={item => handleCreatedCatalogItem("Game", item)}
+          onClose={() => setShowCreateModal({ open: false, category: null, lineIdx: null })}
+          showNotification={showNotification}
+        />
+      )}
     </div>
   );
 };
