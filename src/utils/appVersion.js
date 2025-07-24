@@ -8,9 +8,25 @@
  */
 
 const appVersion = {
-  version: '1.1.0',
+  version: '1.2.0',
   lastUpdated: '2025-07-24',
   versionHistory: [
+    {
+      version: '1.2.0',
+      date: '2025-07-24',
+      timestamp: '2025-07-24 14:37:06',
+      author: 'dmillsap06',
+      changes: [
+        'Redesigned login and registration pages with modern UI',
+        'Removed email field from login page, using username/password only',
+        'Added proper input field labels for autofill compatibility',
+        'Improved form validation and error handling',
+        'Added multi-step registration process for better user experience',
+        'Enhanced accessibility with proper focus states and visual feedback',
+        'Added username availability check during registration',
+        'Fixed sign up button functionality in login page'
+      ]
+    },
     {
       version: '1.1.0',
       date: '2025-07-24',
