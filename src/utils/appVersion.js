@@ -1,7 +1,21 @@
 const appVersion = {
-  version: '1.3.2',
+  version: '1.4.2',
   lastUpdated: '2025-07-24',
   versionHistory: [
+  {
+  version: '1.4.2',
+  date: '2025-07-24',
+  timestamp: '2025-07-24 16:20:15',
+  author: 'dmillsap06',
+  changes: [
+    'Fixed NavMenu import path in Dashboard component',
+    'Added formatted date/time display at bottom of dashboard',
+    'Added current user login display to dashboard',
+    'Fixed navigation menu path structure',
+    'Improved UI consistency across mobile and desktop views',
+    'Updated role checks to match current database structure'
+  ]
+},
   {
       version: '1.3.2',
       date: '2025-07-24',

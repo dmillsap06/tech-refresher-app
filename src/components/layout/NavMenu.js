@@ -22,12 +22,12 @@ const NavMenu = ({ userProfile, onLogout }) => {
   ];
   
   // Add Admin section only for admin users
-  if (userProfile?.isAdmin || userProfile?.isSuperAdmin) {
+  if (userProfile?.role === 'admin' || userProfile?.role === 'superadmin') {
     navLinks.push({ name: 'Admin', path: '/admin' });
   }
   
   // Changelog only visible to super admins
-  if (userProfile?.isSuperAdmin) {
+  if (userProfile?.role === 'superadmin') {
     navLinks.push({ name: 'Changelog', path: '/changelog' });
   }
   
@@ -60,19 +60,17 @@ const NavMenu = ({ userProfile, onLogout }) => {
           </Link>
         ))}
         
-        {/* User dropdown with logout */}
-        <div className="relative ml-3">
-          <div className="flex items-center">
-            <span className="mr-2 text-sm text-gray-700 dark:text-gray-300">
-              {userProfile?.displayName || userProfile?.email}
-            </span>
-            <button
-              onClick={onLogout}
-              className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
-            >
-              Logout
-            </button>
-          </div>
+        {/* User info and logout button */}
+        <div className="relative ml-3 flex items-center">
+          <span className="mr-2 text-sm text-gray-700 dark:text-gray-300">
+            {userProfile?.firstName || userProfile?.email}
+          </span>
+          <button
+            onClick={onLogout}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300"
+          >
+            Logout
+          </button>
         </div>
         
         {/* Version number - small and discrete */}
@@ -113,11 +111,11 @@ const NavMenu = ({ userProfile, onLogout }) => {
           <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                {userProfile?.displayName || userProfile?.email}
+                {userProfile?.firstName || userProfile?.email}
               </span>
               <button
                 onClick={onLogout}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300"
               >
                 Logout
               </button>

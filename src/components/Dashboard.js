@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import logError from '../utils/logError';
+import NavMenu from './layout/NavMenu';
 
 // --- Icon Components ---
 const BanknotesIcon = () => (
@@ -114,24 +115,16 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+      {/* Top navigation bar with NavMenu component */}
       <header className="bg-white dark:bg-gray-800 shadow-md">
         <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
             Tech Refresher
           </h1>
-          <div className="flex items-center">
-            <span className="text-gray-700 dark:text-gray-300 mr-4 hidden sm:block">
-              Welcome, {capitalize(userProfile.firstName)}!
-            </span>
-            <button
-              onClick={onLogout}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 dark:focus:ring-red-800"
-            >
-              Logout
-            </button>
-          </div>
+          <NavMenu userProfile={userProfile} onLogout={onLogout} />
         </div>
       </header>
+      
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           
