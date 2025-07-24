@@ -171,8 +171,15 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const total = subtotal + Number(tax || 0) + Number(shippingCost || 0) + Number(otherFees || 0);
 
   const handleDollarChange = setter => e => {
-    let val = e.target.value.replace(/[^0-9.]/g, '');
-    if ((val.match(/\./g) || []).length > 1) return;
+    // Allow negative sign for Other Fees
+    let val = e.target.value.replace(/[^0-9.\-]/g, '');
+    // Make sure only one negative sign at the beginning and only one decimal point
+    if (val.startsWith('-') && val.indexOf('-', 1) !== -1) {
+      val = '-' + val.replace(/-/g, '');
+    }
+    if ((val.match(/\./g) || []).length > 1) {
+      val = val.replace(/\./g, (match, offset) => offset === val.indexOf('.') ? match : '');
+    }
     setter(val);
   };
 
@@ -324,14 +331,15 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Vendor Order #
+                  Vendor Order # <span className="text-red-500">*</span>
                 </label>
                 <input 
                   type="text" 
                   className={inputClass} 
                   value={vendorOrderNumber} 
                   onChange={e => setVendorOrderNumber(e.target.value)} 
-                  placeholder="Optional"
+                  placeholder="Vendor's order number"
+                  required
                 />
               </div>
               
@@ -579,7 +587,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Other Fees <span className="text-xs text-gray-400">(describe in notes)</span>
+                      Other Fees <span className="text-xs text-gray-400">(can be negative for discounts)</span>
                     </label>
                     <div className={dollarInputWrapper}>
                       <span className={dollarPrefix}>$</span>
@@ -615,7 +623,9 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-sm text-gray-500 dark:text-gray-400">Other Fees:</dt>
-                      <dd className="text-sm font-medium">${formatMoney(otherFees || 0)}</dd>
+                      <dd className={`text-sm font-medium ${Number(otherFees) < 0 ? 'text-green-600 dark:text-green-400' : ''}`}>
+                        ${formatMoney(otherFees || 0)}
+                      </dd>
                     </div>
                     <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
                       <div className="flex justify-between">

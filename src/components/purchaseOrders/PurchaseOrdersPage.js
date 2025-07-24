@@ -360,14 +360,14 @@ const PurchaseOrdersPage = ({ userProfile, showNotification, onBack, onLogout })
                       >
                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                           {po.poNumber || po.id.slice(-6).toUpperCase()}
-                          {po.vendorOrderNumber && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              Vendor #: {po.vendorOrderNumber}
-                            </div>
-                          )}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {po.vendor}
+                          {po.vendorOrderNumber && (
+                            <div className="text-xs text-gray-400 dark:text-gray-500">
+                              Order #: {po.vendorOrderNumber}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {formatDate(po.date)}
