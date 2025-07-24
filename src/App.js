@@ -1,129 +1,203 @@
 import React, { useState, useEffect } from 'react';
-import AuthPage from './components/auth/AuthPage';
-import Dashboard from './components/Dashboard';
-import InventoryPage from './components/inventory/InventoryPage';
-import Settings from './components/Settings/Settings';
-import PartsPage from './components/parts/PartsPage';
-import ArchivedInventory from './components/ArchivedInventory';
-import OrdersPage from './components/orders/OrdersPage';
-import ErrorLog from './components/ErrorLog';
-import Notification from './components/Notification';
-import SplashScreen from './components/SplashScreen';
-import PurchaseOrdersPage from './components/purchaseOrders/PurchaseOrdersPage'; // <-- NEW IMPORT
-import { auth } from './firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from './firebase';
-import logError from './utils/logError';
+import { auth, db } from './firebase';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+// Layout
+import AppLayout from './components/layout/AppLayout';
+
+// Pages
+import LoginPage from './components/auth/LoginPage';
+import RegisterPage from './components/auth/RegisterPage';
+import Dashboard from './components/Dashboard';
+import PurchaseOrdersPage from './components/purchaseOrders/PurchaseOrdersPage';
+import InventoryPage from './components/inventory/InventoryPage';
+import RepairsPage from './components/repairs/RepairsPage';
+import CustomersPage from './components/customers/CustomersPage';
+import SettingsPage from './components/Settings/SettingsPage';
+import AdminPage from './components/admin/AdminPage';
+import Changelog from './components/admin/Changelog';
+
+// Protected route wrapper
+const ProtectedRoute = ({ children, isAuthenticated, userProfile, requiredRole }) => {
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  // If route requires specific role
+  if (requiredRole) {
+    const hasRole = 
+      (requiredRole === 'admin' && (userProfile?.isAdmin || userProfile?.isSuperAdmin)) ||
+      (requiredRole === 'superAdmin' && userProfile?.isSuperAdmin);
+      
+    if (!hasRole) {
+      return <Navigate to="/" />;
+    }
+  }
+  
+  return children;
+};
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [authReady, setAuthReady] = useState(false);
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  const [notification, setNotification] = useState({ message: '', type: '' });
 
-  // On auth state change, get the user's profile from Firestore if logged in
+  const showNotification = (message, type = 'info') => {
+    toast[type](message, {
+      position: "top-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setUserProfile(null);
-        setIsSuperAdmin(false);
-        setAuthReady(true); // Auth checked
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            setUserProfile({ id: user.uid, ...userDoc.data() });
+          }
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+        }
       } else {
-        let profile = null;
-        let userRef = doc(db, 'users', user.uid);
-        let userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          profile = userSnap.data();
-        } else {
-          profile = null;
-        }
-        if (profile) {
-          setUserProfile(profile);
-          setIsSuperAdmin(profile.role === "superadmin");
-        } else {
-          setUserProfile(null);
-          setIsSuperAdmin(false);
-        }
-        setAuthReady(true); // Auth checked
+        setIsAuthenticated(false);
+        setUserProfile(null);
       }
+      setIsLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
-  const showNotification = (message, type) => {
-    setNotification({ message, type });
-  };
-
-  const handleLogin = (profile) => {
-    setUserProfile(profile);
-    setIsSuperAdmin(profile.role === "superadmin");
-    setCurrentPage('dashboard');
-  };
-
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await auth.signOut();
+      setIsAuthenticated(false);
+      setUserProfile(null);
+      showNotification('Logged out successfully', 'success');
     } catch (error) {
-      logError('App-SignOut', error);
-      showNotification('Could not sign out properly.', 'error');
+      showNotification('Error signing out: ' + error.message, 'error');
     }
-    setUserProfile(null);
-    setIsSuperAdmin(false);
   };
 
-  const navigate = (page) => {
-    setCurrentPage(page);
-  };
-
-  if (!authReady) {
-    // Show splash while loading
-    return <SplashScreen />;
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
-  const pageProps = {
-    onBack: () => navigate('dashboard'),
-    showNotification: showNotification,
-    userProfile: userProfile,
-    isSuperAdmin: isSuperAdmin
-  };
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'inventory':
-        return <InventoryPage {...pageProps} />;
-      case 'settings':
-        return <Settings {...pageProps} />;
-      case 'parts':
-        return <PartsPage {...pageProps} />;
-      case 'archived':
-        return <ArchivedInventory {...pageProps} />;
-      case 'orders':
-        return <OrdersPage {...pageProps} />;
-      case 'purchaseorders':
-        return <PurchaseOrdersPage {...pageProps} />; // <-- NEW CASE
-      case 'errorlog':
-        return isSuperAdmin ? <ErrorLog {...pageProps} /> : <Dashboard userProfile={userProfile} onLogout={handleLogout} onNavigate={navigate} isSuperAdmin={isSuperAdmin} />;
-      case 'dashboard':
-      default:
-        return <Dashboard userProfile={userProfile} onLogout={handleLogout} onNavigate={navigate} isSuperAdmin={isSuperAdmin} />;
-    }
-  };
-
   return (
-    <div className="App bg-gray-100 dark:bg-gray-900 min-h-screen">
-      <Notification 
-        message={notification.message}
-        type={notification.type}
-        onClose={() => setNotification({ message: '', type: '' })}
-      />
-      {!userProfile ? (
-        <AuthPage onLogin={handleLogin} showNotification={showNotification} />
-      ) : (
-        renderPage()
-      )}
-    </div>
+    <Router>
+      <ToastContainer />
+      <Routes>
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <LoginPage setIsAuthenticated={setIsAuthenticated} showNotification={showNotification} />} />
+        <Route path="/register" element={isAuthenticated ? <Navigate to="/" /> : <RegisterPage setIsAuthenticated={setIsAuthenticated} showNotification={showNotification} />} />
+        
+        {/* Protected Routes */}
+        <Route 
+          path="/" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Dashboard">
+                <Dashboard userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/purchase-orders" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Purchase Orders">
+                <PurchaseOrdersPage userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/inventory" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Inventory">
+                <InventoryPage userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/repairs" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Repairs">
+                <RepairsPage userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/customers" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Customers">
+                <CustomersPage userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/settings" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Settings">
+                <SettingsPage userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/admin" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile} requiredRole="admin">
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Admin">
+                <AdminPage userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/changelog" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile} requiredRole="superAdmin">
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Changelog">
+                <Changelog userProfile={userProfile} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Catch all - redirect to dashboard */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Router>
   );
 }
 

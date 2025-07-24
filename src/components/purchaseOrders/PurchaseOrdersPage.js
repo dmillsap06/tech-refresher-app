@@ -17,11 +17,6 @@ const statusInfo = {
   "Archived":  { color: "bg-gray-200 text-gray-600", emoji: "📁", label: "Archived" }
 };
 
-const capitalize = (s) => {
-  if (typeof s !== 'string' || !s) return '';
-  return s.charAt(0).toUpperCase() + s.slice(1);
-};
-
 const formatMoney = (amount) => {
   return new Intl.NumberFormat('en-US', { 
     style: 'currency', 
@@ -55,7 +50,7 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const PurchaseOrdersPage = ({ userProfile, showNotification, onBack, onLogout }) => {
+const PurchaseOrdersPage = ({ userProfile, showNotification }) => {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [selectedPO, setSelectedPO] = useState(null);
@@ -207,197 +202,167 @@ const PurchaseOrdersPage = ({ userProfile, showNotification, onBack, onLogout })
   }, [purchaseOrders]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto py-3 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 flex items-center">
-            <button 
-              onClick={onBack} 
-              className="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
-            >
-              &larr;
-            </button>
-            Tech Refresher
-          </h1>
-          <div className="flex items-center gap-4">
-            <span className="text-gray-700 dark:text-gray-300 hidden sm:block">
-              Welcome, {capitalize(userProfile.firstName)}!
-            </span>
-            <button
-              onClick={onLogout}
-              className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-            >
-              Logout
-            </button>
-          </div>
+    <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
+      {/* Page Header */}
+      <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Purchase Orders</h2>
+          <button 
+            className="px-4 py-2 rounded-md bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
+            onClick={() => setShowForm(true)}
+          >
+            + New Purchase Order
+          </button>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto mt-6 px-4 sm:px-6 lg:px-8">
-        <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
-          {/* Page Header */}
-          <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Purchase Orders</h2>
-              <button 
-                className="px-4 py-2 rounded-md bg-indigo-600 text-white font-medium shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
-                onClick={() => setShowForm(true)}
-              >
-                + New Purchase Order
-              </button>
-            </div>
-          </div>
-          
-          {/* Filters */}
-          <div className="p-4 bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-3 items-center justify-between">
-            <div className="w-full sm:w-64">
-              <input
-                type="text"
-                placeholder="Search POs..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
-              >
-                <option value="">All Statuses</option>
-                {statuses.map(status => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setStatusFilter('');
-                }}
-                className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-          
-          {/* Purchase Orders Table */}
-          {loading ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-              <span className="ml-3 text-gray-500 dark:text-gray-400">Loading...</span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              {filteredPOs.length === 0 ? (
-                <div className="text-center py-12">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No purchase orders found</h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {searchTerm || statusFilter ? 'Try adjusting your filters' : 'Get started by creating a new purchase order'}
-                  </p>
-                  {!searchTerm && !statusFilter && (
-                    <div className="mt-6">
-                      <button
-                        onClick={() => setShowForm(true)}
-                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                      >
-                        + New Purchase Order
-                      </button>
-                    </div>
-                  )}
+      </div>
+      
+      {/* Filters */}
+      <div className="p-4 bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="w-full sm:w-64">
+          <input
+            type="text"
+            placeholder="Search POs..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+          >
+            <option value="">All Statuses</option>
+            {statuses.map(status => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => {
+              setSearchTerm('');
+              setStatusFilter('');
+            }}
+            className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+      
+      {/* Purchase Orders Table */}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+          <span className="ml-3 text-gray-500 dark:text-gray-400">Loading...</span>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          {filteredPOs.length === 0 ? (
+            <div className="text-center py-12">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No purchase orders found</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {searchTerm || statusFilter ? 'Try adjusting your filters' : 'Get started by creating a new purchase order'}
+              </p>
+              {!searchTerm && !statusFilter && (
+                <div className="mt-6">
+                  <button
+                    onClick={() => setShowForm(true)}
+                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    + New Purchase Order
+                  </button>
                 </div>
-              ) : (
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th 
-                        scope="col" 
-                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                        onClick={() => handleSort('id')}
-                      >
-                        PO # {sortField === 'id' && (sortDirection === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th 
-                        scope="col" 
-                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                        onClick={() => handleSort('vendor')}
-                      >
-                        Vendor {sortField === 'vendor' && (sortDirection === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th 
-                        scope="col" 
-                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                        onClick={() => handleSort('date')}
-                      >
-                        Date {sortField === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th 
-                        scope="col" 
-                        className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                        onClick={() => handleSort('total')}
-                      >
-                        Total {sortField === 'total' && (sortDirection === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {filteredPOs.map(po => (
-                      <tr 
-                        key={po.id} 
-                        className="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer"
-                        onClick={() => setSelectedPO(po)}
-                      >
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                          {po.poNumber || po.id.slice(-6).toUpperCase()}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {po.vendor}
-                          {po.vendorOrderNumber && (
-                            <div className="text-xs text-gray-400 dark:text-gray-500">
-                              Order #: {po.vendorOrderNumber}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {formatDate(po.date)}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">
-                          <StatusBadge status={po.status} />
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">
-                          {formatMoney(po.total)}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                          <button 
-                            className="px-3 py-1 inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedPO(po);
-                            }}
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               )}
             </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th 
+                    scope="col" 
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                    onClick={() => handleSort('id')}
+                  >
+                    PO # {sortField === 'id' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                    onClick={() => handleSort('vendor')}
+                  >
+                    Vendor {sortField === 'vendor' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                    onClick={() => handleSort('date')}
+                  >
+                    Order Date {sortField === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                    onClick={() => handleSort('total')}
+                  >
+                    Total {sortField === 'total' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredPOs.map(po => (
+                  <tr 
+                    key={po.id} 
+                    className="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer"
+                    onClick={() => setSelectedPO(po)}
+                  >
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                      {po.poNumber || po.id.slice(-6).toUpperCase()}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {po.vendor}
+                      {po.vendorOrderNumber && (
+                        <div className="text-xs text-gray-400 dark:text-gray-500">
+                          Order #: {po.vendorOrderNumber}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {formatDate(po.date)}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      <StatusBadge status={po.status} />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">
+                      {formatMoney(po.total)}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                      <button 
+                        className="px-3 py-1 inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPO(po);
+                        }}
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
-      </main>
+      )}
 
       {/* Modals */}
       {showForm && (
