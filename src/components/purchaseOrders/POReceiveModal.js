@@ -52,7 +52,7 @@ async function fetchLinkedName(category, linkedId) {
   }
 }
 
-// Format current date and time
+// Format current date and time in UTC YYYY-MM-DD HH:MM:SS format
 function getCurrentDateTime() {
   const now = new Date();
   const year = now.getUTCFullYear();
@@ -77,8 +77,49 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
   const [receiveNotes, setReceiveNotes] = useState('');
   const errorReported = useRef(false);
   const receivedSuccessfully = useRef(false);
-  const currentDateTime = getCurrentDateTime();
-  const currentUser = userProfile?.username || userProfile?.email || 'unknown';
+  const currentUser = {userProfile?.username};
+    const getFormattedDate = () => {
+    const now = new Date();
+    const options = {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true
+    };
+    
+    const timeStr = new Intl.DateTimeFormat('en-US', options).format(now);
+    
+    const dateOptions = {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    };
+    
+    const dateStr = new Intl.DateTimeFormat('en-US', dateOptions).format(now);
+    
+    // Add the ordinal suffix (st, nd, rd, th) to the day
+    const dayMatch = dateStr.match(/(\d+),/);
+    if (dayMatch && dayMatch[1]) {
+      const day = parseInt(dayMatch[1], 10);
+      let suffix = 'th';
+      
+      if (day % 10 === 1 && day !== 11) {
+        suffix = 'st';
+      } else if (day % 10 === 2 && day !== 12) {
+        suffix = 'nd';
+      } else if (day % 10 === 3 && day !== 13) {
+        suffix = 'rd';
+      }
+      
+      // Replace the day number with day + suffix
+      const formattedDate = dateStr.replace(/(\d+),/, `$1${suffix},`);
+      return `${formattedDate} ${timeStr} EST`;
+    }
+    
+    return `${dateStr} ${timeStr} EST`;
+  };
+  
 
   // Reset the success flag when the modal opens
   useEffect(() => {
@@ -163,7 +204,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
             </button>
           </div>
           <div className="mt-6 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-4">
-            Current Date: {currentDateTime} • User: {currentUser}
+            Current Date: {getFormattedDate()} • User: {currentUser}
           </div>
         </div>
       </div>
@@ -226,7 +267,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
         dateReceived: receiveDate || new Date().toISOString().substring(0, 10),
         notes: receiveNotes || "",
         receivedLineItems,
-        recordedBy: userProfile.displayName || userProfile.name || userProfile.username || "Unknown user",
+        recordedBy: currentUser,
         recordedAt: new Date().toISOString(),
       };
 
@@ -237,7 +278,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
       statusHistory.push({
         status: newStatus,
         at: new Date().toISOString(),
-        by: userProfile.displayName || userProfile.name || userProfile.username || "Unknown user",
+        by: currentUser,
         note: statusNote
       });
 

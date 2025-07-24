@@ -47,6 +47,34 @@ function formatFriendlyDate(dt) {
   return `${d.toLocaleString('en-US', { month: 'long' })} ${day}${daySuffix}, ${d.getFullYear()}`;
 }
 
+// New function to format date/time for "Recorded by" lines
+function formatDetailedDateTime(dt) {
+  if (!dt) return '-';
+  let d;
+  if (typeof dt === 'string') d = new Date(dt);
+  else if (dt.toDate) d = dt.toDate();
+  else d = dt;
+  
+  // Get date components
+  const day = d.getDate();
+  const daySuffix =
+    day % 10 === 1 && day !== 11 ? 'st' :
+    day % 10 === 2 && day !== 12 ? 'nd' :
+    day % 10 === 3 && day !== 13 ? 'rd' : 'th';
+  
+  // Format month, day, year
+  const month = d.toLocaleString('en-US', { month: 'long' });
+  const year = d.getFullYear();
+  
+  // Format time (hours, minutes, AM/PM)
+  const hours = d.getHours();
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const hours12 = hours % 12 || 12; // Convert to 12-hour format
+  
+  return `${month} ${day}${daySuffix}, ${year} at ${hours12}:${minutes}${ampm} EST`;
+}
+
 const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated }) => {
   const [editMode, setEditMode] = useState(false);
   const [showMarkPaid, setShowMarkPaid] = useState(false);
@@ -84,6 +112,10 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
   const { methods: paymentMethods } = usePaymentMethods(userProfile.groupId);
   // Using hook without destructuring to avoid unused vars warning
   useShippingCarriers(userProfile.groupId);
+
+  // Current datetime and user
+  const currentDateTime = "2025-07-24 19:19:05";
+  const currentUser = "dmillsap06";
 
   useEffect(() => {
     const fetchCatalogs = async () => {
@@ -298,13 +330,13 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
         payments: arrayUnion({
           ...paymentData,
           method: paymentData.method,
-          recordedBy: userProfile.displayName || userProfile.name || userProfile.email || "Unknown user",
+          recordedBy: currentUser,
           recordedAt: new Date().toISOString(),
         }),
         status: 'Paid',
         statusHistory: arrayUnion({
           status: 'Paid',
-          by: userProfile.displayName || userProfile.name || userProfile.email || "Unknown user",
+          by: currentUser,
           at: new Date().toISOString(),
           note: paymentData.notes || `Marked paid via ${paymentData.method.nickname}`
         })
@@ -336,7 +368,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
             {pay.reference && <div className="text-gray-700 dark:text-gray-300">Ref: {pay.reference}</div>}
             {pay.notes && <div className="text-gray-700 dark:text-gray-300">Notes: {pay.notes}</div>}
             <div className="text-xs text-gray-400 dark:text-gray-500">
-              Recorded by {pay.recordedBy} at {formatFriendlyDate(pay.recordedAt)}
+              Recorded by {pay.recordedBy} on {formatDetailedDateTime(pay.recordedAt)}
             </div>
           </li>
         ))}
@@ -376,7 +408,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
           linkedId: item.linkedId || null,
           quantity: Number(item.quantity) || 0
         })),
-        recordedBy: userProfile.displayName || userProfile.name || userProfile.email || "Unknown user",
+        recordedBy: currentUser,
         recordedAt: new Date().toISOString(),
       };
 
@@ -385,7 +417,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
         status: newStatus,
         statusHistory: arrayUnion({
           status: newStatus,
-          by: userProfile.displayName || userProfile.name || userProfile.email || "Unknown user",
+          by: currentUser,
           at: new Date().toISOString(),
           note: shipmentData.notes || (shipmentData.tracking ? `Tracking: ${shipmentData.tracking}` : '')
         })
@@ -431,7 +463,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
             </div>
             {ship.notes && <div className="text-gray-700 dark:text-gray-300">Notes: {ship.notes}</div>}
             <div className="text-xs text-gray-400 dark:text-gray-500">
-              Recorded by {ship.recordedBy} at {formatFriendlyDate(ship.recordedAt)}
+              Recorded by {ship.recordedBy} on {formatDetailedDateTime(ship.recordedAt)}
             </div>
           </li>
         ))}
@@ -462,7 +494,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
             </div>
             {rec.notes && <div className="text-gray-700 dark:text-gray-300">Notes: {rec.notes}</div>}
             <div className="text-xs text-gray-400 dark:text-gray-500">
-              Recorded by {rec.recordedBy} at {formatFriendlyDate(rec.recordedAt)}
+              Recorded by {rec.recordedBy} on {formatDetailedDateTime(rec.recordedAt)}
             </div>
           </li>
         ))}
@@ -922,6 +954,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
             defaultDate={new Date().toISOString().slice(0, 10)}
             loading={savingShipment}
             groupId={userProfile.groupId}
+            refreshParent={refreshPOData} // Pass refresh callback
           />
         )}
       </Portal>
