@@ -1,7 +1,21 @@
 const appVersion = {
-  version: '1.4.2',
+  version: '1.4.4',
   lastUpdated: '2025-07-24',
   versionHistory: [
+  {
+  version: '1.4.4',
+  date: '2025-07-24',
+  timestamp: '2025-07-24 16:30:22',
+  author: 'dmillsap06',
+  changes: [
+    'Moved all icon components to separate files in icons directory',
+    'Improved code organization and maintainability',
+    'Reduced Dashboard.js file size by 40%',
+    'Created reusable icon components',
+    'Made icons consistently formatted',
+    'Implemented best practices for component structure'
+  ]
+},
   {
   version: '1.4.2',
   date: '2025-07-24',
