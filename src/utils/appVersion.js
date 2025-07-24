@@ -1,7 +1,21 @@
 const appVersion = {
-  version: '1.4.4',
+  version: '1.4.5',
   lastUpdated: '2025-07-24',
   versionHistory: [
+  {
+  version: '1.4.5',
+  date: '2025-07-24',
+  timestamp: '2025-07-24 16:45:22',
+  author: 'dmillsap06',
+  changes: [
+    'Fixed icon import issue by centralizing icons in a single file',
+    'Improved grid layout for better responsiveness',
+    'Fixed datetime display in UTC format',
+    'Added user login information display',
+    'Optimized SVG icons for better performance',
+    'Fixed build issues with component paths'
+  ]
+},
   {
   version: '1.4.4',
   date: '2025-07-24',

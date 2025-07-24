@@ -4,16 +4,18 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import logError from '../utils/logError';
 import NavMenu from './layout/NavMenu';
 
-// Import icons from separate files
-import BanknotesIcon from './icons/BanknotesIcon';
-import TrendingUpIcon from './icons/TrendingUpIcon';
-import ArchiveBoxIcon from './icons/ArchiveBoxIcon';
-import ClipboardCheckIcon from './icons/ClipboardCheckIcon';
-import BoxIcon from './icons/BoxIcon';
-import WrenchIcon from './icons/WrenchIcon';
-import CogIcon from './icons/CogIcon';
-import ShieldExclamationIcon from './icons/ShieldExclamationIcon';
-import ClipboardDocumentIcon from './icons/ClipboardDocumentIcon';
+// Import all icons from the icons index file
+import {
+  BanknotesIcon,
+  TrendingUpIcon,
+  ArchiveBoxIcon,
+  ClipboardCheckIcon,
+  BoxIcon,
+  WrenchIcon,
+  CogIcon,
+  ShieldExclamationIcon,
+  ClipboardDocumentIcon
+} from './icons';
 
 const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
   const [financials, setFinancials] = useState({ totalRevenue: 0, netProfit: 0, onHandValue: 0 });
@@ -123,7 +125,7 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
 
           <div>
             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Manage</h2>
-            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${isSuperAdmin ? '7' : '5'} gap-6`}>
+            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${isSuperAdmin ? '4' : '3'} gap-6`}>
               <button onClick={() => onNavigate('orders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center mb-2">
                   <ClipboardCheckIcon />
