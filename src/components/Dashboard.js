@@ -101,14 +101,14 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
           <div className="mb-8">
             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Manage</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <button onClick={() => onNavigate('orders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <button onClick={() => onNavigate('/customer-orders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center mb-2">
                   <ClipboardCheckIcon />
                   <h3 className="ml-2 text-xl font-bold text-purple-600 dark:text-purple-400">Orders</h3>
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">Manage customer orders.</p>
               </button>
-			  <button onClick={() => onNavigate('/purchase-orders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <button onClick={() => onNavigate('/purchase-orders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center mb-2">
                   <ClipboardDocumentIcon />
                   <h3 className="ml-2 text-xl font-bold text-orange-600 dark:text-orange-400">Purchase Orders</h3>
@@ -129,14 +129,14 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">Browse and manage parts.</p>
               </button>
-			  <button onClick={() => onNavigate('/accessories')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <button onClick={() => onNavigate('/accessories')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center mb-2">
                   <WrenchIcon />
                   <h3 className="ml-2 text-xl font-bold text-green-600 dark:text-green-400">Accessories</h3>
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">Browse and manage accessories.</p>
               </button>
-			  <button onClick={() => onNavigate('/games')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <button onClick={() => onNavigate('/games')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center mb-2">
                   <WrenchIcon />
                   <h3 className="ml-2 text-xl font-bold text-green-600 dark:text-green-400">Games</h3>
@@ -150,31 +150,31 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">View historical records.</p>
               </button>
-                  <button onClick={() => onNavigate('/settings')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-                    <div className="flex items-center mb-2">
-                      <CogIcon />
-                      <h3 className="ml-2 text-xl font-bold text-gray-600 dark:text-gray-300">Settings</h3>
-                    </div>
-                    <p className="mt-2 text-gray-600 dark:text-gray-400">
-                      Manage your personal settings.
-                    </p>
-                  </button>
+              <button onClick={() => onNavigate('/settings')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <div className="flex items-center mb-2">
+                  <CogIcon />
+                  <h3 className="ml-2 text-xl font-bold text-gray-600 dark:text-gray-300">Settings</h3>
+                </div>
+                <p className="mt-2 text-gray-600 dark:text-gray-400">
+                  Manage your personal settings.
+                </p>
+              </button>
             </div>
           </div>
-		  {isSuperAdmin && (
-			<div className="mb-8">
-				<h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Admin</h2>
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-					<button onClick={() => onNavigate('/errorlog')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-						<div className="flex items-center mb-2">
-							<ShieldExclamationIcon />
-							<h3 className="ml-2 text-xl font-bold text-red-600 dark:text-red-400">Error Log</h3>
-						</div>
-						<p className="mt-2 text-gray-600 dark:text-gray-400">View application errors.</p>
-					</button>
-				</div>
-			</div>
-		  )}
+          {isSuperAdmin && (
+            <div className="mb-8">
+                <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Admin</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <button onClick={() => onNavigate('/errorlog')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                        <div className="flex items-center mb-2">
+                            <ShieldExclamationIcon />
+                            <h3 className="ml-2 text-xl font-bold text-red-600 dark:text-red-400">Error Log</h3>
+                        </div>
+                        <p className="mt-2 text-gray-600 dark:text-gray-400">View application errors.</p>
+                    </button>
+                </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
