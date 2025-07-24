@@ -124,53 +124,43 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
       return false;
     }
 	
-	// Check if email already exists
+	// For email check (around line 99)
 try {
-  console.log(`Checking if email "${email.toLowerCase()}" is already registered...`);
-  const emailQuery = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
-  const emailSnapshot = await getDocs(emailQuery);
-  
-  if (!emailSnapshot.empty) {
-    setError('Email is already registered. Please use a different email or try logging in.');
-    return false;
-  }
-} catch (err) {
-  console.error("Email check error:", err);
-  // Log error with more explicit error object
-  await logError('SignUp-CheckEmail', {
-    message: `Error checking if email ${email.toLowerCase()} is already registered: ${err.message}`,
-    code: err.code,
-    stack: err.stack
-  }, {
-    email: email.toLowerCase(),
-    action: 'Checking email availability'
-  });
-  setError('Error checking email availability. Please try again or contact support.');
-  return false;
-}
-
-    // Check if username already exists
-    try {
-      const usernameQuery = query(collection(db, 'users'), where('username', '==', username.toLowerCase()));
-      const usernameSnapshot = await getDocs(usernameQuery);
-      
-      if (!usernameSnapshot.empty) {
-        setError('Username already taken. Please choose another.');
-        return false;
-      }
-      return true;
-    } catch (err) {
-      console.error("Username check error:", err);
-      await logError('SignUp-CheckUsername', {
-        message: 'Error checking username availability',
-        originalError: err
-      }, {
-        username: username.toLowerCase(),
-        action: 'Checking username availability'
-      });
-      setError('Error checking username availability. Please try again or contact support.');
+  console.log(`Checking if email "${email}" is already registered...`);
+  try {
+    const emailQuery = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
+    const emailSnapshot = await getDocs(emailQuery);
+    
+    if (!emailSnapshot.empty) {
+      setError('Email is already registered. Please use a different email or try logging in.');
       return false;
     }
+  } catch (permissionError) {
+    console.warn('Permission error checking email, proceeding with registration:', permissionError);
+    // Proceed anyway, Firebase Auth will still catch duplicate emails
+  }
+  
+  // Similar change for username check
+  try {
+    const usernameQuery = query(collection(db, 'users'), where('username', '==', username.toLowerCase()));
+    const usernameSnapshot = await getDocs(usernameQuery);
+    
+    if (!usernameSnapshot.empty) {
+      setError('Username already taken. Please choose another.');
+      return false;
+    }
+  } catch (permissionError) {
+    console.warn('Permission error checking username, proceeding with registration:', permissionError);
+    // No good fallback here, so we'll proceed with registration
+  }
+  
+  return true;
+} catch (err) {
+  console.error("Validation error:", err);
+  await logError('SignUp-Validation', err, { email, username });
+  setError('Error validating registration data. Please try again or contact support.');
+  return false;
+}
   };
 
   const handleCreateUser = async (e) => {

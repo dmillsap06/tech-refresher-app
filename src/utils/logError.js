@@ -2,57 +2,56 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
 /**
- * Logs errors to Firestore with enhanced information including IP address when available
- * @param {string} source - The source of the error (component/function name)
- * @param {Error|Object} error - The error object or data to log
- * @param {Object} additionalData - Any additional data to include in the log
- * @returns {Promise<void>}
+ * Logs errors to Firestore with enhanced information
+ * Falls back to localStorage if Firestore permissions fail
  */
 const logError = async (source, error, additionalData = {}) => {
-  // Always log to console first to ensure we see errors even if Firestore logging fails
+  // Always log to console first
   console.error(`[${source}] Error:`, error);
-  console.error('Additional data:', additionalData);
   
+  const errorData = {
+    source,
+    timestamp: new Date().toISOString(),
+    message: error?.message || (typeof error === 'string' ? error : JSON.stringify(error)),
+    stack: error?.stack || null,
+    code: error?.code || null,
+    userAgent: navigator.userAgent,
+    userId: additionalData?.userId || 'anonymous',
+    additionalInfo: additionalData || {},
+  };
+  
+  // Try to get IP address
   try {
-    // Get client IP address when possible using a free IP lookup service
-    let ipAddress = 'unknown';
-    try {
-      const ipResponse = await fetch('https://api.ipify.org?format=json');
-      if (ipResponse.ok) {
-        const ipData = await ipResponse.json();
-        ipAddress = ipData.ip;
-      }
-    } catch (ipError) {
-      console.warn('Unable to get IP address for error logging', ipError);
+    const ipResponse = await fetch('https://api.ipify.org?format=json');
+    if (ipResponse.ok) {
+      const ipData = await ipResponse.json();
+      errorData.ipAddress = ipData.ip;
     }
+  } catch (ipError) {
+    console.warn('Unable to get IP address for error logging');
+  }
 
-    // Format the error object
-    const errorData = {
-      source,
+  try {
+    // Try Firestore first
+    const docRef = await addDoc(collection(db, 'error_logs'), {
+      ...errorData,
       timestamp: serverTimestamp(),
-      clientTimestamp: new Date().toISOString(),
-      message: error?.message || (typeof error === 'string' ? error : JSON.stringify(error)),
-      stack: error?.stack || null,
-      code: error?.code || null,
-      ipAddress,
-      userAgent: navigator.userAgent,
-      userId: additionalData?.userId || 'anonymous',
-      location: source,
-      errorMessage: error?.message || (typeof error === 'string' ? error : JSON.stringify(error)),
-      additionalData: additionalData || {},
-    };
-
-    console.log('Attempting to save error log to Firestore:', errorData);
-    
-    // Log to Firestore
-    const docRef = await addDoc(collection(db, 'error_logs'), errorData);
-    console.log('Error successfully logged to Firestore with ID:', docRef.id);
-    
+    });
+    console.log('Error logged to Firestore:', docRef.id);
     return docRef.id;
-  } catch (loggingError) {
-    // If error logging fails, log to console as fallback
-    console.error('Failed to log error to Firestore:', loggingError);
-    console.error('Original error:', source, error, additionalData);
+  } catch (firestoreError) {
+    console.warn('Failed to log to Firestore, using localStorage fallback:', firestoreError);
+    
+    // Fallback to localStorage
+    try {
+      const storedLogs = JSON.parse(localStorage.getItem('error_logs') || '[]');
+      storedLogs.push(errorData);
+      localStorage.setItem('error_logs', JSON.stringify(storedLogs.slice(-50))); // Keep last 50 errors
+      console.log('Error logged to localStorage');
+    } catch (localStorageError) {
+      console.error('Failed to log to localStorage:', localStorageError);
+    }
+    
     return null;
   }
 };
