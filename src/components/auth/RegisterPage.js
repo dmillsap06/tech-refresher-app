@@ -123,28 +123,31 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
       setError('Password is too weak. It should be at least 8 characters and include a mix of letters, numbers, and special characters.');
       return false;
     }
-
-    // Check if email already exists
-    try {
-      const emailQuery = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
-      const emailSnapshot = await getDocs(emailQuery);
-      
-      if (!emailSnapshot.empty) {
-        setError('Email is already registered. Please use a different email or try logging in.');
-        return false;
-      }
-    } catch (err) {
-      console.error("Email check error:", err);
-      await logError('SignUp-CheckEmail', {
-        message: 'Error checking email availability',
-        originalError: err
-      }, {
-        email: email.toLowerCase(),
-        action: 'Checking email availability'
-      });
-      setError('Error checking email availability. Please try again or contact support.');
-      return false;
-    }
+	
+	// Check if email already exists
+try {
+  console.log(`Checking if email "${email.toLowerCase()}" is already registered...`);
+  const emailQuery = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
+  const emailSnapshot = await getDocs(emailQuery);
+  
+  if (!emailSnapshot.empty) {
+    setError('Email is already registered. Please use a different email or try logging in.');
+    return false;
+  }
+} catch (err) {
+  console.error("Email check error:", err);
+  // Log error with more explicit error object
+  await logError('SignUp-CheckEmail', {
+    message: `Error checking if email ${email.toLowerCase()} is already registered: ${err.message}`,
+    code: err.code,
+    stack: err.stack
+  }, {
+    email: email.toLowerCase(),
+    action: 'Checking email availability'
+  });
+  setError('Error checking email availability. Please try again or contact support.');
+  return false;
+}
 
     // Check if username already exists
     try {

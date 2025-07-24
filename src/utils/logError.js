@@ -9,6 +9,10 @@ import { db } from '../firebase';
  * @returns {Promise<void>}
  */
 const logError = async (source, error, additionalData = {}) => {
+  // Always log to console first to ensure we see errors even if Firestore logging fails
+  console.error(`[${source}] Error:`, error);
+  console.error('Additional data:', additionalData);
+  
   try {
     // Get client IP address when possible using a free IP lookup service
     let ipAddress = 'unknown';
@@ -19,8 +23,7 @@ const logError = async (source, error, additionalData = {}) => {
         ipAddress = ipData.ip;
       }
     } catch (ipError) {
-      // Silently fail if IP lookup doesn't work
-      console.warn('Unable to get IP address for error logging');
+      console.warn('Unable to get IP address for error logging', ipError);
     }
 
     // Format the error object
@@ -28,28 +31,29 @@ const logError = async (source, error, additionalData = {}) => {
       source,
       timestamp: serverTimestamp(),
       clientTimestamp: new Date().toISOString(),
-      message: error?.message || JSON.stringify(error),
+      message: error?.message || (typeof error === 'string' ? error : JSON.stringify(error)),
       stack: error?.stack || null,
       code: error?.code || null,
       ipAddress,
       userAgent: navigator.userAgent,
       userId: additionalData?.userId || 'anonymous',
       location: source,
-      errorMessage: error?.message || JSON.stringify(error),
+      errorMessage: error?.message || (typeof error === 'string' ? error : JSON.stringify(error)),
       additionalData: additionalData || {},
     };
 
-    // Log to Firestore
-    await addDoc(collection(db, 'error_logs'), errorData);
+    console.log('Attempting to save error log to Firestore:', errorData);
     
-    // Also log to console in development
-    if (process.env.NODE_ENV !== 'production') {
-      console.error(`[${source}]`, error, additionalData);
-    }
+    // Log to Firestore
+    const docRef = await addDoc(collection(db, 'error_logs'), errorData);
+    console.log('Error successfully logged to Firestore with ID:', docRef.id);
+    
+    return docRef.id;
   } catch (loggingError) {
     // If error logging fails, log to console as fallback
-    console.error('Error logging failed:', loggingError);
+    console.error('Failed to log error to Firestore:', loggingError);
     console.error('Original error:', source, error, additionalData);
+    return null;
   }
 };
 
