@@ -23,7 +23,6 @@ export default function MarkAsShippedModal({
   const [shippedQuantities, setShippedQuantities] = useState([]);
   const [touched, setTouched] = useState(false);
   const errorReported = useRef(false);
-  const initialRender = useRef(true);
 
   // Reset state when modal opens
   useEffect(() => {
