@@ -73,16 +73,6 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-      {/* Top navigation bar with NavMenu component */}
-      <header className="bg-white dark:bg-gray-800 shadow-md">
-        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-            Tech Refresher
-          </h1>
-          <NavMenu userProfile={userProfile} onLogout={onLogout} />
-        </div>
-      </header>
-      
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           
