@@ -172,7 +172,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
 
   const handleDollarChange = setter => e => {
     // Allow negative sign for Other Fees
-    let val = e.target.value.replace(/[^0-9.\-]/g, '');
+    let val = e.target.value.replace(/[^0-9.-]/g, '');
     // Make sure only one negative sign at the beginning and only one decimal point
     if (val.startsWith('-') && val.indexOf('-', 1) !== -1) {
       val = '-' + val.replace(/-/g, '');
