@@ -8,9 +8,33 @@
  */
 
 const appVersion = {
-  version: '1.0.1',
+  version: '1.0.3',
   lastUpdated: '2025-07-24',
   versionHistory: [
+    {
+      version: '1.0.3',
+      date: '2025-07-24',
+      timestamp: '2025-07-24 13:24:04',
+      author: 'dmillsap06',
+      changes: [
+        'Added placeholder components for modules under development',
+        'Created temporary UI for Repairs, Customers, Inventory, Settings, and Admin pages',
+        'Fixed build errors related to missing component files',
+        'Updated Dashboard to show available/coming soon status for features'
+      ]
+    },
+    {
+      version: '1.0.2',
+      date: '2025-07-24',
+      timestamp: '2025-07-24 13:16:38',
+      author: 'dmillsap06',
+      changes: [
+        'Fixed Tailwind CSS configuration warnings by updating to v3.0 format',
+        'Updated darkMode setting in Tailwind config from false to media',
+        'Fixed module import paths for auth components',
+        'Resolved build errors in production deployment'
+      ]
+    },
     {
       version: '1.0.1',
       date: '2025-07-24',
