@@ -108,49 +108,49 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">Manage customer orders.</p>
               </button>
-			  <button onClick={() => onNavigate('purchaseorders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+			  <button onClick={() => onNavigate('/purchase-orders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center mb-2">
                   <ClipboardDocumentIcon />
                   <h3 className="ml-2 text-xl font-bold text-orange-600 dark:text-orange-400">Purchase Orders</h3>
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">View, create, and receive purchase orders.</p>
               </button>
-              <button onClick={() => onNavigate('inventory')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <button onClick={() => onNavigate('/devices')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center mb-2">
                   <BoxIcon />
                   <h3 className="ml-2 text-xl font-bold text-indigo-600 dark:text-indigo-400">Devices</h3>
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">Browse and manage devices.</p>
               </button>
-              <button onClick={() => onNavigate('parts')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <button onClick={() => onNavigate('/parts')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center mb-2">
                   <WrenchIcon />
                   <h3 className="ml-2 text-xl font-bold text-green-600 dark:text-green-400">Parts</h3>
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">Browse and manage parts.</p>
               </button>
-			  <button onClick={() => onNavigate('accessories')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+			  <button onClick={() => onNavigate('/accessories')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center mb-2">
                   <WrenchIcon />
                   <h3 className="ml-2 text-xl font-bold text-green-600 dark:text-green-400">Accessories</h3>
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">Browse and manage accessories.</p>
               </button>
-			  <button onClick={() => onNavigate('games')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+			  <button onClick={() => onNavigate('/games')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center mb-2">
                   <WrenchIcon />
                   <h3 className="ml-2 text-xl font-bold text-green-600 dark:text-green-400">Games</h3>
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">Browse and manage games.</p>
               </button>
-              <button onClick={() => onNavigate('archived')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <button onClick={() => onNavigate('/archived-orders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center mb-2">
                   <ArchiveBoxIcon />
                   <h3 className="ml-2 text-xl font-bold text-yellow-600 dark:text-yellow-400">Archived Orders</h3>
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">View historical records.</p>
               </button>
-                  <button onClick={() => onNavigate('settings')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                  <button onClick={() => onNavigate('/settings')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                     <div className="flex items-center mb-2">
                       <CogIcon />
                       <h3 className="ml-2 text-xl font-bold text-gray-600 dark:text-gray-300">Settings</h3>
@@ -165,7 +165,7 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
 			<div className="mb-8">
 				<h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Admin</h2>
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-					<button onClick={() => onNavigate('errorlog')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+					<button onClick={() => onNavigate('/errorlog')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
 						<div className="flex items-center mb-2">
 							<ShieldExclamationIcon />
 							<h3 className="ml-2 text-xl font-bold text-red-600 dark:text-red-400">Error Log</h3>
