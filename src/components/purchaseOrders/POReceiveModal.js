@@ -393,7 +393,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
             Receive {receiveAll ? 'All' : 'Partial'} Items
           </h2>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {currentDateTime} • User: {currentUser}
+            {getCurrentDateTime} • User: {currentUser}
           </div>
         </div>
 
