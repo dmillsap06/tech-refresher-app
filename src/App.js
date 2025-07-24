@@ -17,7 +17,7 @@ import Dashboard from './components/Dashboard';
 
 // Orders
 import PurchaseOrdersPage from './components/purchaseOrders/PurchaseOrdersPage';
-import CustomerOrdersPage from './components/customers/CustomerOrdersPage';
+import CustomerOrdersPage from './components/orders/CustomerOrdersPage';
 import ArchivedOrdersPage from './components/orders/ArchivedOrdersPage';
 
 // Inventory
