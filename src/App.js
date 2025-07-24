@@ -10,8 +10,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import AppLayout from './components/layout/AppLayout';
 
 // Pages
-import LoginPage from './components/auth/Login'; // Updated import path
-import RegisterPage from './components/auth/SignUp'; // Updated import path
+import LoginPage from './components/auth/LoginPage'; // Correct import path
+import RegisterPage from './components/auth/SignUp'; // Correct import path
 import Dashboard from './components/Dashboard';
 import PurchaseOrdersPage from './components/purchaseOrders/PurchaseOrdersPage';
 import InventoryPage from './components/inventory/InventoryPage';
