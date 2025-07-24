@@ -107,4 +107,4 @@ const OrdersPage = ({ onBack, showNotification, userProfile }) => {
     );
 };
 
-export default OrdersPage;
+export default CustomerOrdersPage;

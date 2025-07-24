@@ -159,4 +159,4 @@ const SignUp = ({ onSignUp, onSwitchToLogin, showNotification }) => {
   );
 };
 
-export default SignUp;
+export default RegisterPage;

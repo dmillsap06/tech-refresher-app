@@ -10,11 +10,23 @@ import 'react-toastify/dist/ReactToastify.css';
 import AppLayout from './components/layout/AppLayout';
 
 // Pages
-import LoginPage from './components/auth/LoginPage'; // Correct import path
-import RegisterPage from './components/auth/SignUp'; // Correct import path
+import LoginPage from './components/auth/LoginPage';
+import RegisterPage from './components/auth/RegisterPage';
 import Dashboard from './components/Dashboard';
+
+// Orders
 import PurchaseOrdersPage from './components/purchaseOrders/PurchaseOrdersPage';
+import CustomerOrdersPage from './components/customers/CustomerOrdersPage';
+import ArchivedOrdersPage from './components/orders/ArchivedOrdersPage';
+
+// Inventory
 import InventoryPage from './components/inventory/InventoryPage';
+import DevicesPage from './components/inventory/DevicesPage';
+import PartsPage from './components/inventory/PartsPage';
+import AccessoriesPage from './components/inventory/AccessoriesPage';
+import GamesPage from './components/inventory/GamesPage';
+
+// Other sections
 import RepairsPage from './components/repairs/RepairsPage';
 import CustomersPage from './components/customers/CustomersPage';
 import SettingsPage from './components/Settings/SettingsPage';
@@ -117,6 +129,7 @@ function App() {
           } 
         />
         
+        {/* Orders Routes */}
         <Route 
           path="/purchase-orders" 
           element={
@@ -129,6 +142,29 @@ function App() {
         />
         
         <Route 
+          path="/customer-orders" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Customer Orders">
+                <CustomerOrdersPage userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/archived-orders" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Archived Orders">
+                <ArchivedOrdersPage userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Inventory Routes */}
+        <Route 
           path="/inventory" 
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
@@ -139,6 +175,51 @@ function App() {
           } 
         />
         
+        <Route 
+          path="/devices" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Devices">
+                <DevicesPage userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/parts" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Parts">
+                <PartsPage userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/accessories" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Accessories">
+                <AccessoriesPage userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/games" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Games">
+                <GamesPage userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Other Routes */}
         <Route 
           path="/repairs" 
           element={

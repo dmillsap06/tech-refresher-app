@@ -8,9 +8,48 @@
  */
 
 const appVersion = {
-  version: '1.0.3',
+  version: '1.1.0',
   lastUpdated: '2025-07-24',
   versionHistory: [
+    {
+      version: '1.1.0',
+      date: '2025-07-24',
+      timestamp: '2025-07-24 13:57:59',
+      author: 'dmillsap06',
+      changes: [
+        'Updated navigation menu with complete hierarchy',
+        'Added Orders submenu (Purchase Orders, Customer Orders, Archived Orders)',
+        'Added Inventory submenu (Devices, Parts, Accessories, Games)',
+        'Created placeholder pages for all new menu sections',
+        'Improved sidebar menu with expandable sections',
+        'Added current date/time display in UTC format',
+        'Updated user login display in header'
+      ]
+    },
+    {
+      version: '1.0.5',
+      date: '2025-07-24',
+      timestamp: '2025-07-24 13:43:07',
+      author: 'dmillsap06',
+      changes: [
+        'Fixed import paths in App.js to use correct location for auth components',
+        'Maintained consistent file structure with auth files in src/components/auth/',
+        'Added uuid package for auth components',
+        'Standardized application directory structure'
+      ]
+    },
+    {
+      version: '1.0.4',
+      date: '2025-07-24',
+      timestamp: '2025-07-24 13:35:59',
+      author: 'dmillsap06',
+      changes: [
+        'Added missing uuid dependency required by auth components',
+        'Fixed build errors related to missing dependencies',
+        'Created script to simplify dependency installation',
+        'Ensured correct file structure for auth components'
+      ]
+    },
     {
       version: '1.0.3',
       date: '2025-07-24',

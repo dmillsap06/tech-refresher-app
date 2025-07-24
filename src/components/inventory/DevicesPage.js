@@ -185,4 +185,4 @@ const InventoryPage = ({ onBack, showNotification }) => {
     );
 };
 
-export default InventoryPage;
+export default DevicesPage;

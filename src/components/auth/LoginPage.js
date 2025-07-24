@@ -137,4 +137,4 @@ const Login = ({ onLogin, showNotification, onSwitchToSignUp }) => {
   );
 };
 
-export default Login;
+export default LoginPage;
