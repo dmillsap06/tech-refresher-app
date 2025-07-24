@@ -55,7 +55,7 @@ const LoginPage = ({ onLogin, showNotification, onSwitchToSignUp }) => {
       // Get the email from the found user document
       const userDoc = querySnapshot.docs[0];
       const email = userDoc.data().email;
-      const userId = userDoc.data().uid || userDoc.id;
+      // Remove the unused userId variable
       
       // Now try sign in with the email and password
       await signInWithEmailAndPassword(auth, email, password);
