@@ -231,14 +231,10 @@ const AppLayout = ({ children, userProfile, onLogout, title }) => {
               <div className="ml-3 relative">
                 <div>
                   <button
-                    onClick={onLogout}
-                    className="max-w-xs bg-gray-100 dark:bg-gray-700 rounded-full flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    <span className="sr-only">Log out</span>
-                    <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white">
-                      {userProfile?.displayName ? userProfile.displayName.charAt(0).toUpperCase() : 'U'}
-                    </div>
-                  </button>
+            onClick={onLogout}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300">
+            Logout
+          </button>
                 </div>
               </div>
             </div>

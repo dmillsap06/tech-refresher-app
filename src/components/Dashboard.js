@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import logError from '../utils/logError';
-import NavMenu from './layout/NavMenu';
 
 // Import all icons from the icons index file
 import {
