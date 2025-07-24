@@ -52,7 +52,7 @@ async function fetchLinkedName(category, linkedId) {
   }
 }
 
-const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
+const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived }) => {
   const [step, setStep] = useState('ask-partial');
   const [receiveAll, setReceiveAll] = useState(true);
   const [quantities, setQuantities] = useState(() =>
@@ -60,6 +60,8 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
   );
   const [saving, setSaving] = useState(false);
   const [linkedNames, setLinkedNames] = useState([]); // for table display
+  const [receiveDate, setReceiveDate] = useState(new Date().toISOString().substring(0, 10));
+  const [receiveNotes, setReceiveNotes] = useState('');
   const errorReported = useRef(false);
 
   // Block receive if any line item is not linked (new logic)
@@ -166,25 +168,40 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
       if (allReceived) newStatus = 'Received';
       else if (someReceived) newStatus = 'Partially Received';
 
-      // Status history note
-      const summary = newLineItems
-        .map((li, idx) => {
-          const prev = Number(po.lineItems[idx].quantityReceived || 0);
-          const now = Number(li.quantityReceived || 0);
-          const recNow = now - prev;
-          return recNow > 0
-            ? `${li.description || 'Item ' + (idx + 1)}: +${recNow}`
-            : null;
-        })
-        .filter(Boolean)
-        .join(', ');
+      // Create a new receivement record
+      const receivedLineItems = newLineItems.map((li, idx) => {
+        const prev = Number(po.lineItems[idx].quantityReceived || 0);
+        const now = Number(li.quantityReceived || 0);
+        const recNow = now - prev;
+        return {
+          index: idx,
+          description: li.description || "Unnamed item",
+          received: recNow,
+          lineIndex: typeof li.index === 'number' ? li.index : null,
+          id: li.id || null,
+          category: li.category || null,
+          linkedId: li.linkedId || null,
+          quantity: Number(li.quantity) || 0
+        };
+      }).filter(item => item.received > 0);
 
+      const receiveRecord = {
+        dateReceived: receiveDate || new Date().toISOString().substring(0, 10),
+        notes: receiveNotes || "",
+        receivedLineItems,
+        recordedBy: userProfile.displayName || userProfile.name || "Unknown user",
+        recordedAt: new Date().toISOString(),
+      };
+
+      // Status history summary (less detailed now)
+      const statusNote = `Received ${receivedLineItems.reduce((sum, item) => sum + item.received, 0)} items`;
+      
       const statusHistory = Array.isArray(po.statusHistory) ? [...po.statusHistory] : [];
       statusHistory.push({
         status: newStatus,
         at: new Date().toISOString(),
-        by: userProfile.displayName || userProfile.name || userProfile.email || 'Unknown',
-        note: summary
+        by: userProfile.displayName || userProfile.name || "Unknown user",
+        note: statusNote
       });
 
       // Update inventory/parts/accessories/devices/games stock if desired
@@ -209,10 +226,15 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
         }
       }
 
+      // Get existing receivements or initialize empty array
+      const receivements = Array.isArray(po.receivements) ? [...po.receivements] : [];
+      receivements.push(receiveRecord);
+
       await updateDoc(doc(db, 'purchase_orders', po.id), {
         lineItems: newLineItems,
         status: newStatus,
         statusHistory,
+        receivements,
         updatedAt: serverTimestamp(),
       });
 
@@ -222,6 +244,12 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
           : 'PO partially received!',
         'success'
       );
+      
+      // Call onReceived to notify parent component to refresh
+      if (typeof onReceived === 'function') {
+        onReceived();
+      }
+      
       onClose();
     } catch (err) {
       if (!errorReported.current) {
@@ -286,8 +314,26 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6" style={{ minHeight: '0px' }}>
-          <div className="mb-4">
-            <p>Enter the quantities you have received for each item:</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block font-medium mb-1">Date Received <span className="text-red-500">*</span></label>
+              <input 
+                type="date" 
+                className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-green-400 dark:bg-gray-700 dark:text-gray-100"
+                value={receiveDate}
+                onChange={e => setReceiveDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Notes</label>
+              <textarea
+                className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-green-400 dark:bg-gray-700 dark:text-gray-100"
+                value={receiveNotes}
+                onChange={e => setReceiveNotes(e.target.value)}
+                rows={1}
+                placeholder="Optional"
+              />
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -319,7 +365,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
                         {receiveAll ? (
                           <input
                             type="number"
-                            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-center"
+                            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-green-400 dark:bg-gray-700 dark:text-gray-100 text-center"
                             value={quantities[idx]}
                             min={0}
                             max={maxReceivable}
@@ -328,7 +374,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
                         ) : (
                           <input
                             type="number"
-                            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-center"
+                            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-green-400 dark:bg-gray-700 dark:text-gray-100 text-center"
                             value={quantities[idx]}
                             min={0}
                             max={maxReceivable}
@@ -371,7 +417,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose }) => {
           <button
             type="button"
             className={`px-8 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700 ${saving ? 'opacity-60' : ''}`}
-            disabled={saving || quantities.every(q => Number(q) <= 0)}
+            disabled={saving || quantities.every(q => Number(q) <= 0) || !receiveDate}
             onClick={handleReceive}
           >{saving ? 'Saving...' : 'Submit Receive'}</button>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { doc, updateDoc, getDocs, collection, arrayUnion } from 'firebase/firestore';
+import { doc, updateDoc, getDocs, collection, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import logError from '../../utils/logError';
 import POReceiveModal from './POReceiveModal';
@@ -47,7 +47,7 @@ function formatFriendlyDate(dt) {
   return `${d.toLocaleString('en-US', { month: 'long' })} ${day}${daySuffix}, ${d.getFullYear()}`;
 }
 
-const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
+const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated }) => {
   const [editMode, setEditMode] = useState(false);
   const [showMarkPaid, setShowMarkPaid] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
@@ -82,7 +82,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
   const [pendingLineIndex, setPendingLineIndex] = useState(null);
 
   const { methods: paymentMethods } = usePaymentMethods(userProfile.groupId);
-  // Using {} to prevent unused vars warning - we only need to import the hook for its functionality
+  // Using hook without destructuring to avoid unused vars warning
   useShippingCarriers(userProfile.groupId);
 
   useEffect(() => {
@@ -187,6 +187,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
       });
       showNotification('PO updated!', 'success');
       setEditMode(false);
+      refreshPOData(); // Refresh data after saving
     } catch (err) {
       if (!errorReported.current) {
         logError('PODetailModal-Update', err);
@@ -254,6 +255,38 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
     setParts(parts => [...parts, newPart]);
   };
 
+  // Function to refresh PO data after operations
+  const refreshPOData = async () => {
+    try {
+      const poDoc = await getDoc(doc(db, 'purchase_orders', po.id));
+      if (poDoc.exists()) {
+        // Get the fresh data with ID
+        const freshPO = {
+          id: po.id,
+          ...poDoc.data()
+        };
+        
+        // Update local state for immediate UI refresh
+        setFormState(state => ({
+          ...state,
+          lineItems: freshPO.lineItems?.map((li, idx) => ({
+            ...li,
+            unitPrice: (typeof li.unitPrice === 'number' && li.unitPrice === 0) ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice),
+            index: idx,
+          })) || [],
+          status: freshPO.status,
+        }));
+        
+        // If parent provided an update callback, use it
+        if (typeof onPOUpdated === 'function') {
+          onPOUpdated(freshPO);
+        }
+      }
+    } catch (err) {
+      console.error("Error refreshing PO data:", err);
+    }
+  };
+
   const statusHistory = po.statusHistory || [];
 
   // ---- PAYMENT HISTORY ----
@@ -265,19 +298,20 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
         payments: arrayUnion({
           ...paymentData,
           method: paymentData.method,
-          recordedBy: userProfile.displayName || userProfile.email,
+          recordedBy: userProfile.displayName || userProfile.name || userProfile.email || "Unknown user",
           recordedAt: new Date().toISOString(),
         }),
         status: 'Paid',
         statusHistory: arrayUnion({
           status: 'Paid',
-          by: userProfile.displayName || userProfile.email,
+          by: userProfile.displayName || userProfile.name || userProfile.email || "Unknown user",
           at: new Date().toISOString(),
           note: paymentData.notes || `Marked paid via ${paymentData.method.nickname}`
         })
       });
       showNotification('Payment recorded!', 'success');
       setShowMarkPaid(false);
+      refreshPOData(); // Refresh data after payment
     } catch (err) {
       showNotification('Failed to record payment', 'error');
     } finally {
@@ -342,7 +376,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
           linkedId: item.linkedId || null,
           quantity: Number(item.quantity) || 0
         })),
-        recordedBy: userProfile.displayName || userProfile.email || "Unknown user",
+        recordedBy: userProfile.displayName || userProfile.name || userProfile.email || "Unknown user",
         recordedAt: new Date().toISOString(),
       };
 
@@ -351,13 +385,14 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
         status: newStatus,
         statusHistory: arrayUnion({
           status: newStatus,
-          by: userProfile.displayName || userProfile.email || "Unknown user",
+          by: userProfile.displayName || userProfile.name || userProfile.email || "Unknown user",
           at: new Date().toISOString(),
           note: shipmentData.notes || (shipmentData.tracking ? `Tracking: ${shipmentData.tracking}` : '')
         })
       });
       showNotification('Shipment recorded!', 'success');
       setShowMarkShipped(false);
+      refreshPOData(); // Refresh data after shipment
     } catch (err) {
       if (!errorReported.current) {
         logError('PODetailModal-MarkShipped', err);
@@ -397,6 +432,37 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
             {ship.notes && <div>Notes: {ship.notes}</div>}
             <div className="text-xs text-gray-400">
               Recorded by {ship.recordedBy} at {formatFriendlyDate(ship.recordedAt)}
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  // ---- RECEIVE HISTORY ----
+  
+  function ReceiveHistory() {
+    if (!po.receivements || po.receivements.length === 0) return <div>No receive records for this PO.</div>;
+    return (
+      <ul>
+        {po.receivements.map((rec, i) => (
+          <li key={i} className="mb-2 border-b pb-1">
+            <div>
+              <b>{formatFriendlyDate(rec.dateReceived)}</b>
+            </div>
+            <div>
+              Items received:
+              <ul className="pl-4 text-xs">
+                {rec.receivedLineItems.map((rli, j) =>
+                  rli.received > 0 && (
+                    <li key={j}>{rli.description}: <b>{rli.received}</b></li>
+                  )
+                )}
+              </ul>
+            </div>
+            {rec.notes && <div>Notes: {rec.notes}</div>}
+            <div className="text-xs text-gray-400">
+              Recorded by {rec.recordedBy} at {formatFriendlyDate(rec.recordedAt)}
             </div>
           </li>
         ))}
@@ -718,6 +784,11 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
               <label className="block font-medium mb-1">Shipment History</label>
               <ShipmentHistory />
             </div>
+            {/* Receive History */}
+            <div className="mb-6">
+              <label className="block font-medium mb-1">Receive History</label>
+              <ReceiveHistory />
+            </div>
           </div>
           <div className="flex justify-end gap-3 mt-5">
             {canMarkPaid && (
@@ -810,6 +881,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose }) => {
             userProfile={userProfile}
             showNotification={showNotification}
             onClose={() => setShowReceiveModal(false)}
+            onReceived={refreshPOData} // Pass refresh callback
             groupId={userProfile.groupId}
           />
         )}
