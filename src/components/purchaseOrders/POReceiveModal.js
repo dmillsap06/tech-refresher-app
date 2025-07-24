@@ -77,7 +77,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
   const [receiveNotes, setReceiveNotes] = useState('');
   const errorReported = useRef(false);
   const receivedSuccessfully = useRef(false);
-  const currentUser = {userProfile?.username};
+  const currentUser = userProfile?.username;
     const getFormattedDate = () => {
     const now = new Date();
     const options = {
