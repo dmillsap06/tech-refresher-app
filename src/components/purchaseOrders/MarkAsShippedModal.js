@@ -82,9 +82,9 @@ export default function MarkAsShippedModal({
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-lg relative">
-          <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+          <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-xl">&times;</button>
           <h2 className="text-xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">Mark as Shipped</h2>
-          <p className="mb-6">Would you like to ship the entire order, or only some items?</p>
+          <p className="mb-6 text-gray-800 dark:text-gray-200">Would you like to ship the entire order, or only some items?</p>
           <div className="flex flex-col gap-3">
             <button
               className="px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-70"
@@ -131,14 +131,14 @@ export default function MarkAsShippedModal({
         <div className="flex-1 overflow-y-auto p-6" style={{ minHeight: '0px' }}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div>
-              <label className="block font-medium mb-1">Date Shipped <span className="text-red-500">*</span></label>
+              <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Date Shipped <span className="text-red-500 dark:text-red-400">*</span></label>
               <input type="date" className={inputClass} value={dateShipped} onChange={e => setDateShipped(e.target.value)} />
-              {touched && !dateShipped && <div className="text-red-600 text-xs mt-1">Date is required.</div>}
+              {touched && !dateShipped && <div className="text-red-600 dark:text-red-400 text-xs mt-1">Date is required.</div>}
             </div>
             <div>
-              <label className="block font-medium mb-1">Carrier <span className="text-red-500">*</span></label>
+              <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Carrier <span className="text-red-500 dark:text-red-400">*</span></label>
               {carriersLoading ? (
-                <div>Loading carriers...</div>
+                <div className="text-gray-600 dark:text-gray-400">Loading carriers...</div>
               ) : (
                 <select className={inputClass} value={carrierId} onChange={e => setCarrierId(e.target.value)}>
                   <option value="">Select a carrier</option>
@@ -147,10 +147,10 @@ export default function MarkAsShippedModal({
                   ))}
                 </select>
               )}
-              {touched && !carrierId && <div className="text-red-600 text-xs mt-1">Carrier is required.</div>}
+              {touched && !carrierId && <div className="text-red-600 dark:text-red-400 text-xs mt-1">Carrier is required.</div>}
             </div>
             <div>
-              <label className="block font-medium mb-1">Tracking Number <span className="text-red-500">*</span></label>
+              <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Tracking Number <span className="text-red-500 dark:text-red-400">*</span></label>
               <input
                 type="text"
                 className={inputClass}
@@ -158,29 +158,29 @@ export default function MarkAsShippedModal({
                 onChange={e => setTracking(e.target.value)}
                 placeholder="Required"
               />
-              {touched && !tracking && <div className="text-red-600 text-xs mt-1">Tracking number is required.</div>}
+              {touched && !tracking && <div className="text-red-600 dark:text-red-400 text-xs mt-1">Tracking number is required.</div>}
             </div>
             <div>
-              <label className="block font-medium mb-1">Notes</label>
+              <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Notes</label>
               <textarea className={inputClass} value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Optional" />
             </div>
           </div>
           <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-            <label className="block font-medium mb-4 text-lg">Line Items Shipped</label>
+            <label className="block font-medium mb-4 text-lg text-gray-800 dark:text-gray-200">Line Items Shipped</label>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm border-collapse">
                 <thead className="bg-gray-100 dark:bg-gray-700">
                   <tr>
-                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold">Description</th>
-                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-32">Qty Ordered</th>
-                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-40">Qty Shipped</th>
+                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Description</th>
+                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-200 w-32">Qty Ordered</th>
+                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-200 w-40">Qty Shipped</th>
                   </tr>
                 </thead>
                 <tbody>
                   {shippedQuantities.map((item, idx) => (
                     <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{item.description}</td>
-                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{item.quantity}</td>
+                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-gray-800 dark:text-gray-200">{item.description}</td>
+                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center text-gray-800 dark:text-gray-200">{item.quantity}</td>
                       <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">
                         <input
                           type="number"
@@ -193,7 +193,7 @@ export default function MarkAsShippedModal({
                           disabled={shipAll}
                         />
                         {touched && (Number(item.shipped) > (item.max !== undefined ? item.max : item.quantity) || Number(item.shipped) < 0) && (
-                          <div className="text-red-600 text-xs mt-1">0 ≤ Qty ≤ {item.max !== undefined ? item.max : item.quantity}</div>
+                          <div className="text-red-600 dark:text-red-400 text-xs mt-1">0 ≤ Qty ≤ {item.max !== undefined ? item.max : item.quantity}</div>
                         )}
                       </td>
                     </tr>
@@ -202,7 +202,7 @@ export default function MarkAsShippedModal({
               </table>
             </div>
             {touched && !shippedQuantities.some(q => Number(q.shipped) > 0) && (
-              <div className="text-red-600 text-sm mt-2 font-medium">You must ship at least one item.</div>
+              <div className="text-red-600 dark:text-red-400 text-sm mt-2 font-medium">You must ship at least one item.</div>
             )}
           </div>
         </div>
@@ -217,7 +217,7 @@ export default function MarkAsShippedModal({
           )}
           <button
             type="button"
-            className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 font-medium"
+            className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-500 font-medium"
             onClick={() => onClose(false)}
             disabled={loading}
           >Cancel</button>
