@@ -66,45 +66,107 @@ const PurchaseOrdersPage = ({ userProfile, showNotification, onBack, onLogout })
   const [sortDirection, setSortDirection] = useState('desc');
 
   const errorReported = useRef(false);
+  const unsubRef = useRef(null);
+  const queryParamsRef = useRef({ field: sortField, direction: sortDirection });
+
+  // Update query params in ref when they change
+  useEffect(() => {
+    queryParamsRef.current = { field: sortField, direction: sortDirection };
+  }, [sortField, sortDirection]);
 
   useEffect(() => {
+    // If we don't have a group ID or are already subscribed, don't proceed
     if (!userProfile?.groupId) return;
+    
+    // Clean up any existing subscription
+    if (unsubRef.current) {
+      unsubRef.current();
+      unsubRef.current = null;
+    }
+    
+    // Only set loading to true when we're first mounting or the group changes
     setLoading(true);
+    
+    // Reset the error flag only when changing groups or remounting
     errorReported.current = false;
     
-    try {
-      const q = query(
-        collection(db, 'purchase_orders'),
-        where('groupId', '==', userProfile.groupId),
-        orderBy(sortField, sortDirection),
-        limit(100) // Add a reasonable limit
-      );
-      
-      const unsub = onSnapshot(q, snapshot => {
-        setPurchaseOrders(
-          snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    const setupSubscription = () => {
+      try {
+        const q = query(
+          collection(db, 'purchase_orders'),
+          where('groupId', '==', userProfile.groupId),
+          orderBy(queryParamsRef.current.field, queryParamsRef.current.direction),
+          limit(100)
         );
-        setLoading(false);
-        errorReported.current = false;
-      }, err => {
+        
+        unsubRef.current = onSnapshot(q, snapshot => {
+          setPurchaseOrders(
+            snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+          );
+          setLoading(false);
+        }, err => {
+          // Only log and notify about errors once
+          if (!errorReported.current) {
+            logError('PurchaseOrdersPage-List', err);
+            setLoading(false);
+            showNotification('Failed to load purchase orders: ' + err.message, 'error');
+            errorReported.current = true;
+          }
+        });
+      } catch (err) {
+        // Only log and notify about errors once
         if (!errorReported.current) {
           logError('PurchaseOrdersPage-List', err);
           setLoading(false);
           showNotification('Failed to load purchase orders: ' + err.message, 'error');
           errorReported.current = true;
         }
-      });
-      
-      return () => unsub();
-    } catch (err) {
-      if (!errorReported.current) {
-        logError('PurchaseOrdersPage-List', err);
-        setLoading(false);
-        showNotification('Failed to load purchase orders: ' + err.message, 'error');
-        errorReported.current = true;
       }
+    };
+    
+    setupSubscription();
+    
+    // Clean up subscription on unmount
+    return () => {
+      if (unsubRef.current) {
+        unsubRef.current();
+        unsubRef.current = null;
+      }
+    };
+  }, [userProfile?.groupId, showNotification]); // Only depend on groupId and notification function
+
+  // Handle sort changes by updating the query
+  useEffect(() => {
+    if (!userProfile?.groupId || !unsubRef.current) return;
+    
+    // Clean up existing subscription
+    if (unsubRef.current) {
+      unsubRef.current();
+      unsubRef.current = null;
     }
-  }, [userProfile, showNotification, sortField, sortDirection]);
+    
+    try {
+      const q = query(
+        collection(db, 'purchase_orders'),
+        where('groupId', '==', userProfile.groupId),
+        orderBy(sortField, sortDirection),
+        limit(100)
+      );
+      
+      unsubRef.current = onSnapshot(q, snapshot => {
+        setPurchaseOrders(
+          snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        );
+        setLoading(false);
+      }, err => {
+        // Don't need to report errors here as they're already handled in the main subscription
+        setLoading(false);
+      });
+    } catch (err) {
+      // Don't need to report errors here as they're already handled in the main subscription
+      setLoading(false);
+    }
+  }, [sortField, sortDirection, userProfile?.groupId]);
 
   // Handle PO updates from detail modal
   const handlePOUpdated = (updatedPO) => {
