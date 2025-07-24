@@ -12,9 +12,47 @@ const LoginPage = ({ onLogin, showNotification, onSwitchToSignUp }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Function to get fixed date
+  // Function to format date as "January 1st, 2025 11:30AM EST"
   const getFormattedDate = () => {
-    return "January 1st, 2025";
+    const now = new Date();
+    const options = {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true
+    };
+    
+    const timeStr = new Intl.DateTimeFormat('en-US', options).format(now);
+    
+    const dateOptions = {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    };
+    
+    const dateStr = new Intl.DateTimeFormat('en-US', dateOptions).format(now);
+    
+    // Add the ordinal suffix (st, nd, rd, th) to the day
+    const dayMatch = dateStr.match(/(\d+),/);
+    if (dayMatch && dayMatch[1]) {
+      const day = parseInt(dayMatch[1], 10);
+      let suffix = 'th';
+      
+      if (day % 10 === 1 && day !== 11) {
+        suffix = 'st';
+      } else if (day % 10 === 2 && day !== 12) {
+        suffix = 'nd';
+      } else if (day % 10 === 3 && day !== 13) {
+        suffix = 'rd';
+      }
+      
+      // Replace the day number with day + suffix
+      const formattedDate = dateStr.replace(/(\d+),/, `$1${suffix},`);
+      return `${formattedDate} ${timeStr} EST`;
+    }
+    
+    return `${dateStr} ${timeStr} EST`;
   };
 
   const handleLogin = async (e) => {
