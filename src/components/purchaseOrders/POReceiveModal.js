@@ -52,6 +52,19 @@ async function fetchLinkedName(category, linkedId) {
   }
 }
 
+// Format current date and time
+function getCurrentDateTime() {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(now.getUTCDate()).padStart(2, '0');
+  const hours = String(now.getUTCHours()).padStart(2, '0');
+  const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived }) => {
   const [step, setStep] = useState('ask-partial');
   const [receiveAll, setReceiveAll] = useState(true);
@@ -63,9 +76,14 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
   const [receiveDate, setReceiveDate] = useState(new Date().toISOString().substring(0, 10));
   const [receiveNotes, setReceiveNotes] = useState('');
   const errorReported = useRef(false);
+  const receivedSuccessfully = useRef(false);
+  const currentDateTime = getCurrentDateTime();
+  const currentUser = userProfile?.username || userProfile?.email || 'unknown';
 
-  // Block receive if any line item is not linked (new logic)
-  const allLinked = po.lineItems.every(li => li.linkedId);
+  // Reset the success flag when the modal opens
+  useEffect(() => {
+    receivedSuccessfully.current = false;
+  }, [po.id]);
 
   useEffect(() => {
     // Fetch linked catalog item names for display
@@ -80,16 +98,30 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
     fetchAll();
   }, [po.lineItems]);
 
+  // Ensure cleanup when modal is closed
+  useEffect(() => {
+    return () => {
+      // If we successfully received items but didn't call onReceived yet
+      if (receivedSuccessfully.current && typeof onReceived === 'function') {
+        console.log('Refreshing PO data on modal cleanup...');
+        onReceived();
+      }
+    };
+  }, [onReceived]);
+
+  // Block receive if any line item is not linked (new logic)
+  const allLinked = po.lineItems.every(li => li.linkedId);
+
   if (!allLinked) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-lg relative">
-          <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+          <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-xl">&times;</button>
           <h2 className="text-xl font-bold mb-4 text-red-700 dark:text-red-300">Cannot Receive</h2>
-          <p className="mb-6 text-red-600">All line items must be linked to a catalog item before receiving.</p>
+          <p className="mb-6 text-red-600 dark:text-red-400">All line items must be linked to a catalog item before receiving.</p>
           <div className="flex justify-end">
             <button
-              className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
+              className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
               onClick={onClose}
             >Close</button>
           </div>
@@ -104,12 +136,12 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-lg relative">
-          <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+          <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-xl">&times;</button>
           <h2 className="text-xl font-bold mb-4 text-green-700 dark:text-green-300">Receive Purchase Order</h2>
-          <p className="mb-6">Would you like to receive the entire PO, or only some items?</p>
+          <p className="mb-6 text-gray-800 dark:text-gray-200">Would you like to receive the entire PO, or only some items?</p>
           <div className="flex flex-col gap-3">
             <button
-              className="px-5 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700 disabled:opacity-70"
+              className="px-5 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700 disabled:opacity-70 transition-colors"
               onClick={() => {
                 setReceiveAll(true);
                 setStep('enter-qty');
@@ -120,7 +152,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
               Receive All Items
             </button>
             <button
-              className="px-5 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700"
+              className="px-5 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors"
               onClick={() => {
                 setReceiveAll(false);
                 setStep('enter-qty');
@@ -129,6 +161,9 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
             >
               Receive Only Some Items
             </button>
+          </div>
+          <div className="mt-6 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-4">
+            Current Date: {currentDateTime} • User: {currentUser}
           </div>
         </div>
       </div>
@@ -146,6 +181,8 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
   const handleReceive = async () => {
     setSaving(true);
     errorReported.current = false;
+    receivedSuccessfully.current = false;
+    
     try {
       const newLineItems = po.lineItems.map((li, idx) => {
         let qtyToReceive = Number(quantities[idx] || 0);
@@ -189,7 +226,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
         dateReceived: receiveDate || new Date().toISOString().substring(0, 10),
         notes: receiveNotes || "",
         receivedLineItems,
-        recordedBy: userProfile.displayName || userProfile.name || "Unknown user",
+        recordedBy: userProfile.displayName || userProfile.name || userProfile.username || "Unknown user",
         recordedAt: new Date().toISOString(),
       };
 
@@ -200,7 +237,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
       statusHistory.push({
         status: newStatus,
         at: new Date().toISOString(),
-        by: userProfile.displayName || userProfile.name || "Unknown user",
+        by: userProfile.displayName || userProfile.name || userProfile.username || "Unknown user",
         note: statusNote
       });
 
@@ -238,6 +275,8 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
         updatedAt: serverTimestamp(),
       });
 
+      receivedSuccessfully.current = true;
+      
       showNotification(
         allReceived
           ? 'PO fully received!'
@@ -245,9 +284,10 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
         'success'
       );
       
-      // Call onReceived to notify parent component to refresh
+      // Call onReceived immediately to refresh parent component
       if (typeof onReceived === 'function') {
-        onReceived();
+        console.log('Refreshing PO data after receive...');
+        await onReceived(); // Wait for refresh to complete
       }
       
       onClose();
@@ -274,7 +314,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
         )
       );
 
-    if (relevantShipments.length === 0) return <span className="text-gray-400">No shipments</span>;
+    if (relevantShipments.length === 0) return <span className="text-gray-400 dark:text-gray-500">No shipments</span>;
 
     return (
       <div className="text-xs text-gray-600 dark:text-gray-300">
@@ -311,23 +351,26 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
           <h2 className="text-2xl font-bold text-green-700 dark:text-green-300">
             Receive {receiveAll ? 'All' : 'Partial'} Items
           </h2>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {currentDateTime} • User: {currentUser}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6" style={{ minHeight: '0px' }}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
-              <label className="block font-medium mb-1">Date Received <span className="text-red-500">*</span></label>
+              <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Date Received <span className="text-red-500 dark:text-red-400">*</span></label>
               <input 
                 type="date" 
-                className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-green-400 dark:bg-gray-700 dark:text-gray-100"
+                className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-green-400 dark:focus:ring-green-500 dark:bg-gray-700 dark:text-gray-100"
                 value={receiveDate}
                 onChange={e => setReceiveDate(e.target.value)}
               />
             </div>
             <div>
-              <label className="block font-medium mb-1">Notes</label>
+              <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Notes</label>
               <textarea
-                className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-green-400 dark:bg-gray-700 dark:text-gray-100"
+                className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-green-400 dark:focus:ring-green-500 dark:bg-gray-700 dark:text-gray-100"
                 value={receiveNotes}
                 onChange={e => setReceiveNotes(e.target.value)}
                 rows={1}
@@ -340,32 +383,32 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
             <table className="min-w-full text-sm border-collapse">
               <thead className="bg-gray-100 dark:bg-gray-700">
                 <tr>
-                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold">Description</th>
-                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-24">Ordered</th>
-                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-32">Shipped</th>
-                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-32">Previously Received</th>
-                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold w-40">Receive Now</th>
-                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold">Shipment Details</th>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold text-gray-800 dark:text-gray-100">Description</th>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-800 dark:text-gray-100 w-24">Ordered</th>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-800 dark:text-gray-100 w-32">Shipped</th>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-800 dark:text-gray-100 w-32">Previously Received</th>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-semibold text-gray-800 dark:text-gray-100 w-40">Receive Now</th>
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left font-semibold text-gray-800 dark:text-gray-100">Shipment Details</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {po.lineItems.map((li, idx) => {
                   const maxReceivable = getMaxReceivable(li, po);
                   const totalShipped = getTotalShipped(li, po);
                   return (
-                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">
+                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-750">
+                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-gray-800 dark:text-gray-200">
                         <div>{li.description}</div>
-                        <div className="text-xs text-gray-500">{linkedNames[idx]}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{linkedNames[idx]}</div>
                       </td>
-                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{li.quantity}</td>
-                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{totalShipped}</td>
-                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{li.quantityReceived || 0}</td>
+                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center text-gray-800 dark:text-gray-200">{li.quantity}</td>
+                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center text-gray-800 dark:text-gray-200">{totalShipped}</td>
+                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center text-gray-800 dark:text-gray-200">{li.quantityReceived || 0}</td>
                       <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">
                         {receiveAll ? (
                           <input
                             type="number"
-                            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-green-400 dark:bg-gray-700 dark:text-gray-100 text-center"
+                            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-green-400 dark:focus:ring-green-500 dark:bg-gray-700 dark:text-gray-100 text-center"
                             value={quantities[idx]}
                             min={0}
                             max={maxReceivable}
@@ -374,7 +417,7 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
                         ) : (
                           <input
                             type="number"
-                            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-green-400 dark:bg-gray-700 dark:text-gray-100 text-center"
+                            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-24 mx-auto focus:outline-none focus:ring-2 focus:ring-green-400 dark:focus:ring-green-500 dark:bg-gray-700 dark:text-gray-100 text-center"
                             value={quantities[idx]}
                             min={0}
                             max={maxReceivable}
@@ -385,10 +428,10 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
                           />
                         )}
                         {maxReceivable <= 0 && !receiveAll && (
-                          <div className="text-red-500 text-xs mt-1">Cannot receive more</div>
+                          <div className="text-red-500 dark:text-red-400 text-xs mt-1">Cannot receive more</div>
                         )}
                       </td>
-                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">
+                      <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-gray-800 dark:text-gray-200">
                         <ShipmentsList lineItem={li} />
                       </td>
                     </tr>
@@ -403,20 +446,20 @@ const POReceiveModal = ({ po, userProfile, showNotification, onClose, onReceived
           {step === 'enter-qty' && (
             <button
               type="button"
-              className="px-6 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 font-medium"
+              className="px-6 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 font-medium transition-colors"
               onClick={() => setStep('ask-partial')}
               disabled={saving}
             >Back</button>
           )}
           <button
             type="button"
-            className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 font-medium"
+            className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-500 font-medium transition-colors"
             onClick={onClose}
             disabled={saving}
           >Cancel</button>
           <button
             type="button"
-            className={`px-8 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700 ${saving ? 'opacity-60' : ''}`}
+            className={`px-8 py-2 rounded bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors ${saving ? 'opacity-60 cursor-not-allowed' : ''}`}
             disabled={saving || quantities.every(q => Number(q) <= 0) || !receiveDate}
             onClick={handleReceive}
           >{saving ? 'Saving...' : 'Submit Receive'}</button>

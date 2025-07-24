@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import useShippingCarriers from './useShippingCarriers';
 
 const inputClass = "border border-gray-300 dark:border-gray-600 rounded px-2 sm:px-3 py-1 sm:py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 text-sm sm:text-base";
@@ -11,6 +11,7 @@ export default function MarkAsShippedModal({
   defaultDate,
   loading,
   groupId,
+  refreshParent, // New prop to explicitly refresh parent
 }) {
   const { carriers, loading: carriersLoading } = useShippingCarriers(groupId);
   const [step, setStep] = useState('ask-shipment-type');
@@ -19,20 +20,37 @@ export default function MarkAsShippedModal({
   const [carrierId, setCarrierId] = useState('');
   const [tracking, setTracking] = useState('');
   const [notes, setNotes] = useState('');
-  const [shippedQuantities, setShippedQuantities] = useState(
-    lineItems.map(li => ({
-      description: li.description,
-      shipped: '',
-      max: Number(li.quantity) - Number(li.shipped || 0) - Number(li.received || li.quantityReceived || 0),
-      lineIndex: li.index !== undefined ? li.index : undefined,
-      id: li.id,
-      category: li.category,
-      linkedId: li.linkedId,
-      quantity: li.quantity
-    }))
-  );
+  const [shippedQuantities, setShippedQuantities] = useState([]);
   const [touched, setTouched] = useState(false);
   const errorReported = useRef(false);
+  const initialRender = useRef(true);
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (open) {
+      setDateShipped(defaultDate || new Date().toISOString().substring(0, 10));
+      setCarrierId('');
+      setTracking('');
+      setNotes('');
+      setTouched(false);
+      setStep('ask-shipment-type');
+      errorReported.current = false;
+      
+      // Initialize shipped quantities from lineItems
+      setShippedQuantities(
+        lineItems.map(li => ({
+          description: li.description,
+          shipped: '',
+          max: Number(li.quantity) - Number(li.shipped || 0) - Number(li.received || li.quantityReceived || 0),
+          lineIndex: li.index !== undefined ? li.index : undefined,
+          id: li.id,
+          category: li.category,
+          linkedId: li.linkedId,
+          quantity: li.quantity
+        }))
+      );
+    }
+  }, [open, lineItems, defaultDate]);
 
   function updateShipped(idx, value) {
     setShippedQuantities(arr => arr.map((q, i) => i === idx ? { ...q, shipped: value } : q));
@@ -50,7 +68,8 @@ export default function MarkAsShippedModal({
 
     const carrierObj = carriers.find(c => c.id === carrierId);
     try {
-      onSave({
+      // Prepare shipping data
+      const shippingData = {
         dateShipped,
         carrier: carrierObj ? { id: carrierObj.id, name: carrierObj.name } : null,
         tracking,
@@ -65,7 +84,19 @@ export default function MarkAsShippedModal({
           linkedId: q.linkedId || null,
           quantity: Number(q.quantity) || 0
         }))
+      };
+
+      // Call onSave with data and add optional callback for post-save actions
+      onSave(shippingData, () => {
+        // If refreshParent is provided, call it to refresh the parent component
+        if (typeof refreshParent === 'function') {
+          refreshParent();
+        }
+        
+        // Close the modal after successful save
+        onClose(true);
       });
+      
     } catch (err) {
       if (!errorReported.current) {
         console.error('MarkAsShippedModal-Save', err);
