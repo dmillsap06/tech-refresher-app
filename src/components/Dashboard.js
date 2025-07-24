@@ -202,12 +202,6 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
               )}
             </div>
           </div>
-
-          <div className="mt-8 text-sm text-gray-500 dark:text-gray-400">
-            <p>Current Date and Time: {getFormattedDate()}</p>
-            <p>Current User's Login: {userProfile?.firstName}</p>
-          </div>
-
         </div>
       </main>
     </div>

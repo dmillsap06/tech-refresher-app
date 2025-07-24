@@ -266,7 +266,7 @@ const AppLayout = ({ children, userProfile, onLogout, title }) => {
               {/* Current time and user info */}
               <div className="text-sm text-gray-500 dark:text-gray-400 mr-4 hidden md:block">
                 <p>{getFormattedDate()}</p>
-                <p className="text-right">{userProfile?.displayName || userProfile?.email}</p>
+                <p className="text-right">{userProfile?.firstName}</p>
               </div>
 
               {/* Profile dropdown */}
