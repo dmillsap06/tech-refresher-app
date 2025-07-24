@@ -174,18 +174,7 @@ function App() {
           } 
         />
         
-        {/* Inventory Routes */}
-        <Route 
-          path="/inventory" 
-          element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
-              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Inventory">
-                <InventoryPage userProfile={userProfile} showNotification={showNotification} />
-              </AppLayout>
-            </ProtectedRoute>
-          } 
-        />
-        
+        {/* Inventory Routes */}        
         <Route 
           path="/devices" 
           element={
