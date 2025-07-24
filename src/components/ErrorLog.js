@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase';
+import { db } from '../../firebase';
 import { collection, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
-import logError from '../utils/logError';
+import logError from '../../utils/logError';
 
 const CheckCircleIcon = ({ className = "" }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 20 20">
@@ -30,7 +30,8 @@ const ErrorLog = ({ onBack, showNotification }) => {
             setErrorLogs(logs);
             setIsLoading(false);
         }, (error) => {
-            logError && logError("ErrorLog-Fetch", error);
+            console.error("Error fetching error logs:", error);
+            logError && logError("ErrorLog-Fetch", error, { userId: 'admin' });
             setIsLoading(false);
             if (showNotification) showNotification("Failed to load error logs.", "error");
         });
@@ -43,9 +44,11 @@ const ErrorLog = ({ onBack, showNotification }) => {
         try {
             const logRef = doc(db, 'error_logs', id);
             await updateDoc(logRef, { resolved: true });
+            if (showNotification) showNotification('Error marked as resolved.', 'success');
         } catch (err) {
-            logError && logError('ErrorLog-MarkResolved', err);
-            if (showNotification) showNotification('Failed to mark as resolved. See console for details.', 'error');
+            console.error("Error marking as resolved:", err);
+            logError && logError('ErrorLog-MarkResolved', err, { userId: 'admin' });
+            if (showNotification) showNotification('Failed to mark as resolved.', 'error');
         } finally {
             setUpdating(prev => ({ ...prev, [id]: false }));
         }
@@ -69,20 +72,21 @@ const ErrorLog = ({ onBack, showNotification }) => {
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-700">
                             <tr>
-                                {['Timestamp', 'User ID', 'Location', 'Error Message', 'Status', 'Action'].map(header => (
+                                {['Timestamp', 'User ID', 'Source', 'Message', 'IP Address', 'Status', 'Action'].map(header => (
                                     <th key={header} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{header}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                             {isLoading ? (
-                                <tr><td colSpan="6" className="px-6 py-4 text-center text-gray-500">Loading error logs...</td></tr>
+                                <tr><td colSpan="7" className="px-6 py-4 text-center text-gray-500">Loading error logs...</td></tr>
                             ) : errorLogs.length > 0 ? errorLogs.map((log) => (
                                 <tr key={log.id} className={log.resolved ? "opacity-60" : ""}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{log.timestamp ? new Date(log.timestamp.toDate()).toLocaleString() : 'N/A'}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{log.userId || 'N/A'}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{log.location}</td>
-                                    <td className="px-6 py-4 text-sm text-red-500">{log.errorMessage}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{log.timestamp ? new Date(log.timestamp.toDate()).toLocaleString() : log.clientTimestamp || 'N/A'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{log.userId || 'anonymous'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{log.source}</td>
+                                    <td className="px-6 py-4 text-sm text-red-500">{log.message || log.errorMessage}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">{log.ipAddress || 'unknown'}</td>
                                     <td className="px-6 py-4 text-sm">
                                         {log.resolved ? (
                                             <span className="text-green-600 font-semibold">Resolved</span>
@@ -110,7 +114,7 @@ const ErrorLog = ({ onBack, showNotification }) => {
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan="6" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">No errors have been logged.</td>
+                                    <td colSpan="7" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">No errors have been logged.</td>
                                 </tr>
                             )}
                         </tbody>

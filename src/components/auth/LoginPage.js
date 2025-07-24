@@ -12,23 +12,9 @@ const LoginPage = ({ onLogin, showNotification, onSwitchToSignUp }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Function to get current time in EST format
-  const getCurrentEstTime = () => {
-    const now = new Date();
-    const options = {
-      timeZone: 'America/New_York',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    };
-    
-    return new Intl.DateTimeFormat('en-US', options)
-      .format(now)
-      .replace(/(\d+)\/(\d+)\/(\d+), (\d+):(\d+):(\d+)/, '$3-$1-$2 $4:$5:$6');
+  // Function to get fixed date
+  const getFormattedDate = () => {
+    return "January 1st, 2025";
   };
 
   const handleLogin = async (e) => {
@@ -59,12 +45,17 @@ const LoginPage = ({ onLogin, showNotification, onSwitchToSignUp }) => {
         setError('Username not found.');
         setIsLoading(false);
         if (showNotification) showNotification('Username not found.', 'error');
+        await logError('Login-UsernameNotFound', { message: 'Username not found' }, { 
+          username,
+          userId: 'anonymous' 
+        });
         return;
       }
       
       // Get the email from the found user document
       const userDoc = querySnapshot.docs[0];
       const email = userDoc.data().email;
+      const userId = userDoc.data().uid || userDoc.id;
       
       // Now try sign in with the email and password
       await signInWithEmailAndPassword(auth, email, password);
@@ -80,10 +71,19 @@ const LoginPage = ({ onLogin, showNotification, onSwitchToSignUp }) => {
       } else {
         setError('No user profile found. Please contact support.');
         if (showNotification) showNotification('No user profile found. Please contact support.', 'error');
-        await logError('Login-NoUserProfile', { username });
+        await logError('Login-NoUserProfile', { message: 'No user profile found' }, { 
+          username, 
+          uid: auth.currentUser.uid,
+          userId: auth.currentUser.uid
+        });
       }
     } catch (err) {
-      await logError('Login-AuthError', err);
+      console.error("Login error:", err);
+      await logError('Login-AuthError', err, { 
+        username,
+        userId: 'anonymous'
+      });
+      
       if (err.code === 'auth/user-not-found') {
         setError('Invalid username or password.');
         if (showNotification) showNotification('Invalid username or password.', 'error');
@@ -242,7 +242,7 @@ const LoginPage = ({ onLogin, showNotification, onSwitchToSignUp }) => {
       
       <div className="mt-8 text-center text-xs text-white/70">
         <p>© {new Date().getFullYear()} Tech Refresher. All rights reserved.</p>
-        <p className="mt-1">Current Time (EST): {getCurrentEstTime()}</p>
+        <p className="mt-1">{getFormattedDate()}</p>
       </div>
     </div>
   );

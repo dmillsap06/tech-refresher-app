@@ -1,16 +1,36 @@
-/**
- * Application version tracking
- * Format: MAJOR.MINOR.PATCH
- * 
- * MAJOR version for incompatible API changes
- * MINOR version for functionality in a backward compatible manner
- * PATCH version for backward compatible bug fixes
- */
-
 const appVersion = {
-  version: '1.3.0',
+  version: '1.3.2',
   lastUpdated: '2025-07-24',
   versionHistory: [
+  {
+      version: '1.3.2',
+      date: '2025-07-24',
+      timestamp: '2025-07-24 15:19:39',
+      author: 'dmillsap06',
+      changes: [
+        'Fixed "Error checking username availability" bug in registration process',
+        'Added email uniqueness verification to prevent duplicate accounts',
+        'Updated login and registration pages to use fixed "January 1st, 2025" date format',
+        'Enhanced error logging with IP address tracking for security',
+        'Fixed ErrorLog component to display correct error information',
+        'Standardized error log collection name across application',
+        'Added more detailed console logging for debugging'
+      ]
+    },
+  {
+      version: '1.3.1',
+      date: '2025-07-24',
+      timestamp: '2025-07-24 15:12:17',
+      author: 'dmillsap06',
+      changes: [
+        'Updated date format on login and registration pages to use month, day with ordinal suffix, and year',
+        'Added IP address tracking to error logging for security monitoring',
+        'Fixed username availability check error in account creation process',
+        'Enhanced error logging with additional context for troubleshooting',
+        'Improved error handling with more specific error messages',
+        'Added user agent tracking for security purposes'
+      ]
+    },
   {
       version: '1.3.0',
       date: '2025-07-24',

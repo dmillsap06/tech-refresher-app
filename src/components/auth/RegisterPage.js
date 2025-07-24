@@ -17,23 +17,9 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Function to get current time in EST format
-  const getCurrentEstTime = () => {
-    const now = new Date();
-    const options = {
-      timeZone: 'America/New_York',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    };
-    
-    return new Intl.DateTimeFormat('en-US', options)
-      .format(now)
-      .replace(/(\d+)\/(\d+)\/(\d+), (\d+):(\d+):(\d+)/, '$3-$1-$2 $4:$5:$6');
+  // Function to format date as "January 1st, 2025"
+  const getFormattedDate = () => {
+    return "January 1st, 2025";
   };
 
   // Calculate password strength
@@ -100,23 +86,50 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
       return false;
     }
 
-    // Check if username already exists
+    // Check if email already exists
     try {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('username', '==', username.toLowerCase()));
-      const querySnapshot = await getDocs(q);
+      const emailQuery = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
+      const emailSnapshot = await getDocs(emailQuery);
       
-      if (!querySnapshot.empty) {
-        setError('Username already taken. Please choose another.');
+      if (!emailSnapshot.empty) {
+        setError('Email is already registered. Please use a different email or try logging in.');
         return false;
       }
     } catch (err) {
-      setError('Error checking username availability.');
-      await logError('SignUp-CheckUsername', err);
+      console.error("Email check error:", err);
+      await logError('SignUp-CheckEmail', {
+        message: 'Error checking email availability',
+        originalError: err
+      }, {
+        email: email.toLowerCase(),
+        action: 'Checking email availability'
+      });
+      setError('Error checking email availability. Please try again or contact support.');
       return false;
     }
 
-    return true;
+    // Check if username already exists
+    try {
+      const usernameQuery = query(collection(db, 'users'), where('username', '==', username.toLowerCase()));
+      const usernameSnapshot = await getDocs(usernameQuery);
+      
+      if (!usernameSnapshot.empty) {
+        setError('Username already taken. Please choose another.');
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error("Username check error:", err);
+      await logError('SignUp-CheckUsername', {
+        message: 'Error checking username availability',
+        originalError: err
+      }, {
+        username: username.toLowerCase(),
+        action: 'Checking username availability'
+      });
+      setError('Error checking username availability. Please try again or contact support.');
+      return false;
+    }
   };
 
   const handleCreateUser = async (e) => {
@@ -124,14 +137,15 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
     setError('');
     
     setIsLoading(true);
-    const isValid = await validateForm();
-    
-    if (!isValid) {
-      setIsLoading(false);
-      return;
-    }
 
     try {
+      const isValid = await validateForm();
+      
+      if (!isValid) {
+        setIsLoading(false);
+        return;
+      }
+
       await setPersistence(auth, browserLocalPersistence);
 
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -141,7 +155,7 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
       const userProfile = {
         uid: userCredential.user.uid,
         username: username.toLowerCase(),
-        email,
+        email: email.toLowerCase(),
         firstName,
         lastName,
         displayName: `${firstName} ${lastName}`,
@@ -165,13 +179,21 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
       if (onSignUp) onSignUp(userProfile);
       if (showNotification) showNotification("Account created successfully!", "success");
     } catch (err) {
-      await logError('SignUp-CreateUser', err);
+      console.error("Account creation error:", err);
+      await logError('SignUp-CreateUser', err, {
+        email: email.toLowerCase(),
+        username: username.toLowerCase(),
+        firstName,
+        lastName,
+        userId: auth.currentUser?.uid || 'anonymous'
+      });
+      
       if (err.code === 'auth/email-already-in-use') {
         setError('Email is already registered.');
         if (showNotification) showNotification('Email is already registered.', 'error');
       } else {
-        setError('Error creating account: ' + err.message);
-        if (showNotification) showNotification('Error creating account: ' + err.message, 'error');
+        setError('Error creating account: ' + (err.message || 'Please try again later.'));
+        if (showNotification) showNotification('Error creating account. Please try again.', 'error');
       }
     } finally {
       setIsLoading(false);
@@ -382,7 +404,7 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
       
       <div className="mt-8 text-center text-xs text-white/70">
         <p>© {new Date().getFullYear()} Tech Refresher. All rights reserved.</p>
-        <p className="mt-1">Current Time (EST): {getCurrentEstTime()}</p>
+        <p className="mt-1">{getFormattedDate()}</p>
       </div>
     </div>
   );
