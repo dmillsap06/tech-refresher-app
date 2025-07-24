@@ -23,10 +23,10 @@ const SettingsCatalog = ({ userProfile, showNotification }) => {
         {CATALOG_TABS.map(tab => (
           <button
             key={tab.id}
-            className={`px-4 py-2 font-semibold rounded-t ${
+            className={`px-4 py-2 font-semibold rounded-t transition-colors ${
               activeTab === tab.id
-                ? 'bg-white dark:bg-gray-700 text-indigo-700 dark:text-indigo-300 border-b-2 border-indigo-600'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                ? 'bg-white dark:bg-gray-700 text-indigo-700 dark:text-indigo-300 border-b-2 border-indigo-600 dark:border-indigo-400'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-750'
             }`}
             onClick={() => setActiveTab(tab.id)}
           >
@@ -34,7 +34,7 @@ const SettingsCatalog = ({ userProfile, showNotification }) => {
           </button>
         ))}
       </div>
-      <div>
+      <div className="text-gray-800 dark:text-gray-200">
         {activeTab === 'brands' && (
           <CatalogBrands userProfile={userProfile} showNotification={showNotification} />
         )}

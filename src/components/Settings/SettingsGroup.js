@@ -29,24 +29,31 @@ const SettingsGroup = ({ userProfile, showNotification }) => {
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg">
       <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Group Information</h2>
-      <div className="mb-4">
-        <span className="font-semibold">Your Group ID:</span>{" "}
-        <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">{groupId}</span>
+      <div className="mb-4 text-gray-800 dark:text-gray-200">
+        <span className="font-semibold text-gray-900 dark:text-gray-100">Your Group ID:</span>{" "}
+        <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-gray-800 dark:text-gray-200">{groupId}</span>
       </div>
       <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Group Members</h3>
       <ul className="space-y-2">
         {groupMembers.map(member => (
           <li
             key={member.email}
-            className="rounded px-4 py-2 bg-gray-100 dark:bg-gray-700 flex justify-between items-center"
+            className="rounded px-4 py-2 bg-gray-100 dark:bg-gray-700 flex justify-between items-center text-gray-800 dark:text-gray-200"
           >
             <span>
               {member.firstName} {member.lastName} ({member.username}) -{" "}
-              <span className="capitalize">{member.role}</span>
-              {member.email === userProfile.email ? " (You)" : ""}
+              <span className="capitalize font-medium">{member.role}</span>
+              {member.email === userProfile.email ? (
+                <span className="ml-1 font-semibold text-indigo-600 dark:text-indigo-400">(You)</span>
+              ) : ""}
             </span>
           </li>
         ))}
+        {groupMembers.length === 0 && (
+          <li className="rounded px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+            Loading group members...
+          </li>
+        )}
       </ul>
     </div>
   );
