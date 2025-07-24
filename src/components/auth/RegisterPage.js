@@ -163,74 +163,102 @@ try {
 }
   };
 
-  const handleCreateUser = async (e) => {
-    e.preventDefault();
-    setError('');
+const handleCreateUser = async (e) => {
+  e.preventDefault();
+  setError('');
+  setIsLoading(true);
+
+  try {
+    const isValid = await validateForm();
     
-    setIsLoading(true);
+    if (!isValid) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Authenticate user first
+    await setPersistence(auth, browserLocalPersistence);
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // Create a new group ID
+    const groupId = uuidv4();
+    
+    // Prepare user profile with correct schema
+    const userProfile = {
+      uid: userCredential.user.uid,
+      username: username.toLowerCase(),
+      email: email.toLowerCase(),
+      firstName,
+      lastName,
+      createdAt: serverTimestamp(),
+      role: 'user',  // Start as regular user
+      groupId
+    };
 
     try {
-      const isValid = await validateForm();
-      
-      if (!isValid) {
-        setIsLoading(false);
-        return;
-      }
-
-      await setPersistence(auth, browserLocalPersistence);
-
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-
-      // New users are admins and get a new groupId by default
-      const groupId = uuidv4();
-      const userProfile = {
-        uid: userCredential.user.uid,
-        username: username.toLowerCase(),
-        email: email.toLowerCase(),
-        firstName,
-        lastName,
-        displayName: `${firstName} ${lastName}`,
-        createdAt: serverTimestamp(),
-        isAdmin: true,
-        isSuperAdmin: false,
-        groupId,
-      };
-
+      // Try to save the user profile
       const userRef = doc(db, 'users', userProfile.uid);
       await setDoc(userRef, userProfile);
-
-      // Also create a group document
-      await setDoc(doc(db, 'groups', groupId), {
-        name: `${firstName}'s Group`,
-        adminId: userProfile.uid,
-        createdAt: serverTimestamp(),
-        members: [userProfile.uid]
-      });
-
+      
+      // Try to create the group document
+      try {
+        await setDoc(doc(db, 'groups', groupId), {
+          name: `${firstName}'s Group`,
+          adminId: userProfile.uid,
+          createdAt: serverTimestamp(),
+          members: [userProfile.uid]
+        });
+      } catch (groupError) {
+        console.warn("Could not create group, but user was created:", groupError);
+        await logError('SignUp-CreateGroup', groupError, {
+          userId: userCredential.user.uid,
+          groupId: groupId
+        });
+        // Continue anyway since the user was created
+      }
+      
       if (onSignUp) onSignUp(userProfile);
       if (showNotification) showNotification("Account created successfully!", "success");
-    } catch (err) {
-      console.error("Account creation error:", err);
-      await logError('SignUp-CreateUser', err, {
+    } catch (profileError) {
+      console.error("Failed to save user profile:", profileError);
+      await logError('SignUp-SaveProfile', profileError, {
+        email: email.toLowerCase(),
+        username: username.toLowerCase(),
+        userId: userCredential.user.uid
+      });
+      
+      // Still proceed because auth account was created
+      if (onSignUp) onSignUp({
+        uid: userCredential.user.uid,
         email: email.toLowerCase(),
         username: username.toLowerCase(),
         firstName,
         lastName,
-        userId: auth.currentUser?.uid || 'anonymous'
+        displayName: `${firstName} ${lastName}`
       });
-      
-      if (err.code === 'auth/email-already-in-use') {
-        setError('Email is already registered.');
-        if (showNotification) showNotification('Email is already registered.', 'error');
-      } else {
-        setError('Error creating account: ' + (err.message || 'Please try again later.'));
-        if (showNotification) showNotification('Error creating account. Please try again.', 'error');
-      }
-    } finally {
-      setIsLoading(false);
+      if (showNotification) showNotification("Account created but profile setup failed. Some features may be limited.", "warning");
     }
-  };
-
+  } catch (err) {
+    console.error("Account creation error:", err);
+    await logError('SignUp-CreateUser', err, {
+      email: email.toLowerCase(),
+      username: username.toLowerCase(),
+      firstName,
+      lastName,
+      userId: auth.currentUser?.uid || 'anonymous'
+    });
+    
+    if (err.code === 'auth/email-already-in-use') {
+      setError('Email is already registered.');
+      if (showNotification) showNotification('Email is already registered.', 'error');
+    } else {
+      setError('Error creating account: ' + (err.message || 'Please try again later.'));
+      if (showNotification) showNotification('Error creating account. Please try again.', 'error');
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 p-4">
       <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
