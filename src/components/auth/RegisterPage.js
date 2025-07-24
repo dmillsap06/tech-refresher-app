@@ -7,7 +7,7 @@ import logError from '../../utils/logError';
 
 const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
-const SignUp = ({ onSignUp, onSwitchToLogin, showNotification }) => {
+const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [firstName, setFirstName] = useState('');

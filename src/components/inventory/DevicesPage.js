@@ -21,7 +21,7 @@ const ArchiveBoxIcon = () => (
     </svg>
 );
 
-const InventoryPage = ({ onBack, showNotification }) => {
+const DevicesPage = ({ onBack, showNotification }) => {
     const [inventory, setInventory] = useState([]);
     const [filteredInventory, setFilteredInventory] = useState([]);
     const [isLoading, setIsLoading] = useState(true);

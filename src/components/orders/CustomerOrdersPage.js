@@ -14,7 +14,7 @@ const ViewIcon = () => (
 );
 
 // Now accepts userProfile as prop
-const OrdersPage = ({ onBack, showNotification, userProfile }) => {
+const CustomerOrdersPage = ({ onBack, showNotification, userProfile }) => {
     const [orders, setOrders] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
