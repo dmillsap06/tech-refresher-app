@@ -49,17 +49,17 @@ export default function MarkAsPaidModal({
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md relative">
         <h2 className="text-xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">Mark as Paid</h2>
         <div className="mb-3">
-          <label className="block font-medium mb-1">Date Paid<span className="text-red-500">*</span></label>
+          <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Date Paid<span className="text-red-500 dark:text-red-400">*</span></label>
           <input
             type="date"
             className={inputClass}
             value={datePaid}
             onChange={e => setDatePaid(e.target.value)}
           />
-          {touched && !datePaid && <div className="text-red-600 text-xs mt-1">Date paid is required.</div>}
+          {touched && !datePaid && <div className="text-red-600 dark:text-red-400 text-xs mt-1">Date paid is required.</div>}
         </div>
         <div className="mb-3">
-          <label className="block font-medium mb-1">Amount Paid<span className="text-red-500">*</span></label>
+          <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Amount Paid<span className="text-red-500 dark:text-red-400">*</span></label>
           <input
             type="number"
             min={0}
@@ -68,12 +68,12 @@ export default function MarkAsPaidModal({
             value={amountPaid}
             onChange={e => setAmountPaid(e.target.value)}
           />
-          {touched && (!amountPaid || isNaN(Number(amountPaid))) && <div className="text-red-600 text-xs mt-1">Valid amount is required.</div>}
+          {touched && (!amountPaid || isNaN(Number(amountPaid))) && <div className="text-red-600 dark:text-red-400 text-xs mt-1">Valid amount is required.</div>}
         </div>
         <div className="mb-3">
-          <label className="block font-medium mb-1">Payment Method<span className="text-red-500">*</span></label>
+          <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Payment Method<span className="text-red-500 dark:text-red-400">*</span></label>
           {methodsLoading ? (
-            <div>Loading methods...</div>
+            <div className="text-gray-600 dark:text-gray-400">Loading methods...</div>
           ) : (
             <select
               className={inputClass}
@@ -89,10 +89,10 @@ export default function MarkAsPaidModal({
               ))}
             </select>
           )}
-          {touched && !methodId && <div className="text-red-600 text-xs mt-1">Payment method is required.</div>}
+          {touched && !methodId && <div className="text-red-600 dark:text-red-400 text-xs mt-1">Payment method is required.</div>}
         </div>
         <div className="mb-3">
-          <label className="block font-medium mb-1">Reference / Transaction ID</label>
+          <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Reference / Transaction ID</label>
           <input
             type="text"
             className={inputClass}
@@ -102,7 +102,7 @@ export default function MarkAsPaidModal({
           />
         </div>
         <div className="mb-3">
-          <label className="block font-medium mb-1">Notes</label>
+          <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Notes</label>
           <textarea
             className={inputClass}
             value={notes}
@@ -114,7 +114,7 @@ export default function MarkAsPaidModal({
         <div className="flex justify-end gap-2 mt-6">
           <button
             type="button"
-            className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
+            className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-500"
             onClick={onClose}
             disabled={loading}
           >Cancel</button>
@@ -130,16 +130,16 @@ export default function MarkAsPaidModal({
           const m = selectableMethods.find(m => m.id === methodId);
           if (!m) return null;
           return (
-            <div className="mt-4 text-xs text-gray-500 dark:text-gray-300 border-t pt-2">
-              <div>Selected Payment Method:</div>
-              <div>
+            <div className="mt-4 text-xs text-gray-500 dark:text-gray-300 border-t dark:border-gray-700 pt-2">
+              <div className="text-gray-700 dark:text-gray-300">Selected Payment Method:</div>
+              <div className="text-gray-700 dark:text-gray-300">
                 <span className="font-semibold">{m.nickname}</span>
                 {" "}
                 ({m.type}{m.lastFour ? `, ****${m.lastFour}` : ''})
                 {m.notes && <span> - {m.notes}</span>}
               </div>
               {m.active === false && (
-                <div className="text-red-500">This method is inactive and should not be used for future payments.</div>
+                <div className="text-red-500 dark:text-red-400">This method is inactive and should not be used for future payments.</div>
               )}
             </div>
           );
