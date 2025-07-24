@@ -57,10 +57,9 @@ const AppLayout = ({ children, userProfile, onLogout, title }) => {
 
           {/* Orders Menu */}
           <div>
-            <a 
-              href="#" 
+            <button 
               onClick={toggleOrders} 
-              className={`group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md ${isSubMenuActive(['/purchase-orders', '/customer-orders', '/archived-orders']) ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+              className={`w-full text-left group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md ${isSubMenuActive(['/purchase-orders', '/customer-orders', '/archived-orders']) ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
             >
               <div className="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className={`mr-3 h-5 w-5 ${isSubMenuActive(['/purchase-orders', '/customer-orders', '/archived-orders']) ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-400'}`} viewBox="0 0 20 20" fill="currentColor">
@@ -69,7 +68,7 @@ const AppLayout = ({ children, userProfile, onLogout, title }) => {
                 Orders
               </div>
               {ordersExpanded ? <FiChevronDown className="h-5 w-5" /> : <FiChevronRight className="h-5 w-5" />}
-            </a>
+            </button>
             
             {ordersExpanded && (
               <div className="pl-8 pr-2 space-y-1">
@@ -108,10 +107,9 @@ const AppLayout = ({ children, userProfile, onLogout, title }) => {
 
           {/* Inventory Menu */}
           <div>
-            <a 
-              href="#" 
+            <button 
               onClick={toggleInventory} 
-              className={`group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md ${isSubMenuActive(['/inventory', '/devices', '/parts', '/accessories', '/games']) ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+              className={`w-full text-left group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md ${isSubMenuActive(['/inventory', '/devices', '/parts', '/accessories', '/games']) ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
             >
               <div className="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className={`mr-3 h-5 w-5 ${isSubMenuActive(['/inventory', '/devices', '/parts', '/accessories', '/games']) ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-400'}`} viewBox="0 0 20 20" fill="currentColor">
@@ -121,7 +119,7 @@ const AppLayout = ({ children, userProfile, onLogout, title }) => {
                 Inventory
               </div>
               {inventoryExpanded ? <FiChevronDown className="h-5 w-5" /> : <FiChevronRight className="h-5 w-5" />}
-            </a>
+            </button>
             
             {inventoryExpanded && (
               <div className="pl-8 pr-2 space-y-1">
