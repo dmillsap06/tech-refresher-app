@@ -9,17 +9,19 @@ import 'react-toastify/dist/ReactToastify.css';
 // Layout
 import AppLayout from './components/layout/AppLayout';
 
+// Auth
+import AuthPage from './components/auth/AuthPage';
+
 // Pages
-import LoginPage from './components/auth/LoginPage';
-import RegisterPage from './components/auth/RegisterPage';
 import Dashboard from './components/Dashboard';
 
 // Orders
 import PurchaseOrdersPage from './components/purchaseOrders/PurchaseOrdersPage';
-import CustomerOrdersPage from './components/orders/CustomerOrdersPage';
+import CustomerOrdersPage from './components/customers/CustomerOrdersPage';
 import ArchivedOrdersPage from './components/orders/ArchivedOrdersPage';
 
 // Inventory
+import InventoryPage from './components/inventory/InventoryPage';
 import DevicesPage from './components/inventory/DevicesPage';
 import PartsPage from './components/inventory/PartsPage';
 import AccessoriesPage from './components/inventory/AccessoriesPage';
@@ -68,6 +70,11 @@ function App() {
     });
   };
 
+  const handleLogin = (userData) => {
+    setUserProfile(userData);
+    setIsAuthenticated(true);
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -113,8 +120,14 @@ function App() {
     <Router>
       <ToastContainer />
       <Routes>
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <LoginPage setIsAuthenticated={setIsAuthenticated} showNotification={showNotification} />} />
-        <Route path="/register" element={isAuthenticated ? <Navigate to="/" /> : <RegisterPage setIsAuthenticated={setIsAuthenticated} showNotification={showNotification} />} />
+        <Route 
+          path="/login" 
+          element={
+            isAuthenticated ? 
+            <Navigate to="/" /> : 
+            <AuthPage onLogin={handleLogin} showNotification={showNotification} />
+          } 
+        />
         
         {/* Protected Routes */}
         <Route 
@@ -162,7 +175,18 @@ function App() {
           } 
         />
         
-        {/* Inventory Routes */}        
+        {/* Inventory Routes */}
+        <Route 
+          path="/inventory" 
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userProfile={userProfile}>
+              <AppLayout userProfile={userProfile} onLogout={handleLogout} title="Inventory">
+                <InventoryPage userProfile={userProfile} showNotification={showNotification} />
+              </AppLayout>
+            </ProtectedRoute>
+          } 
+        />
+        
         <Route 
           path="/devices" 
           element={
@@ -263,8 +287,8 @@ function App() {
           } 
         />
         
-        {/* Catch all - redirect to dashboard */}
-        <Route path="*" element={<Navigate to="/" />} />
+        {/* Catch all - redirect to dashboard if authenticated, login if not */}
+        <Route path="*" element={isAuthenticated ? <Navigate to="/" /> : <Navigate to="/login" />} />
       </Routes>
     </Router>
   );
