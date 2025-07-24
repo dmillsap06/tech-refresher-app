@@ -17,14 +17,14 @@ const dollarInputWrapper = "relative";
 const dollarPrefix = "absolute left-2 inset-y-0 flex items-center text-gray-400 pointer-events-none";
 
 const statusInfo = {
-  "Created":   { color: "bg-blue-100 text-blue-700", emoji: "📝", label: "Created" },
-  "Partially Received": { color: "bg-yellow-100 text-yellow-800", emoji: "📦", label: "Partial" },
-  "Received":  { color: "bg-green-100 text-green-700", emoji: "✅", label: "Received" },
-  "Cancelled": { color: "bg-gray-200 text-gray-500", emoji: "❌", label: "Cancelled" },
-  "Paid":      { color: "bg-indigo-100 text-indigo-700", emoji: "💸", label: "Paid" },
-  "Shipped":   { color: "bg-blue-100 text-blue-700", emoji: "🚚", label: "Shipped" },
-  "Partially Shipped": { color: "bg-yellow-100 text-yellow-800", emoji: "📦", label: "Partial Ship" },
-  "Archived":  { color: "bg-gray-200 text-gray-600", emoji: "📁", label: "Archived" }
+  "Created":   { color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200", emoji: "📝", label: "Created" },
+  "Partially Received": { color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200", emoji: "📦", label: "Partial" },
+  "Received":  { color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200", emoji: "✅", label: "Received" },
+  "Cancelled": { color: "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-300", emoji: "❌", label: "Cancelled" },
+  "Paid":      { color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200", emoji: "💸", label: "Paid" },
+  "Shipped":   { color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200", emoji: "🚚", label: "Shipped" },
+  "Partially Shipped": { color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200", emoji: "📦", label: "Partial Ship" },
+  "Archived":  { color: "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300", emoji: "📁", label: "Archived" }
 };
 
 function formatMoney(val) {
@@ -320,22 +320,22 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
   }
 
   function PaymentHistory() {
-    if (!po.payments || po.payments.length === 0) return <div>No payments recorded for this PO.</div>;
+    if (!po.payments || po.payments.length === 0) return <div className="text-gray-600 dark:text-gray-400">No payments recorded for this PO.</div>;
     return (
       <ul>
         {po.payments.map((pay, i) => (
-          <li key={i} className="mb-2 border-b pb-1">
-            <div>
+          <li key={i} className="mb-2 border-b dark:border-gray-700 pb-1">
+            <div className="text-gray-800 dark:text-gray-300">
               <b>{formatMoney(pay.amountPaid)}</b> paid on {formatFriendlyDate(pay.datePaid)}
             </div>
-            <div>
+            <div className="text-gray-700 dark:text-gray-300">
               via <span className="font-semibold">{pay.method.nickname}</span>
               {" "}({pay.method.type}{pay.method.lastFour ? `, ****${pay.method.lastFour}` : ''})
               {pay.method.notes && <> - {pay.method.notes}</>}
             </div>
-            {pay.reference && <div>Ref: {pay.reference}</div>}
-            {pay.notes && <div>Notes: {pay.notes}</div>}
-            <div className="text-xs text-gray-400">
+            {pay.reference && <div className="text-gray-700 dark:text-gray-300">Ref: {pay.reference}</div>}
+            {pay.notes && <div className="text-gray-700 dark:text-gray-300">Notes: {pay.notes}</div>}
+            <div className="text-xs text-gray-400 dark:text-gray-500">
               Recorded by {pay.recordedBy} at {formatFriendlyDate(pay.recordedAt)}
             </div>
           </li>
@@ -405,12 +405,12 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
   }
 
   function ShipmentHistory() {
-    if (!po.shipments || po.shipments.length === 0) return <div>No shipments recorded for this PO.</div>;
+    if (!po.shipments || po.shipments.length === 0) return <div className="text-gray-600 dark:text-gray-400">No shipments recorded for this PO.</div>;
     return (
       <ul>
         {po.shipments.map((ship, i) => (
-          <li key={i} className="mb-2 border-b pb-1">
-            <div>
+          <li key={i} className="mb-2 border-b dark:border-gray-700 pb-1">
+            <div className="text-gray-800 dark:text-gray-300">
               <b>{formatFriendlyDate(ship.dateShipped)}</b>
               {ship.carrier && ship.carrier.name && (
                 <> — <span className="font-semibold">{ship.carrier.name}</span></>
@@ -419,9 +419,9 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
                 <> — Tracking: <span className="font-mono">{ship.tracking}</span></>
               )}
             </div>
-            <div>
+            <div className="text-gray-700 dark:text-gray-300">
               Items shipped:
-              <ul className="pl-4 text-xs">
+              <ul className="pl-4 text-xs text-gray-700 dark:text-gray-300">
                 {ship.shippedLineItems.map((sli, j) =>
                   sli.shipped > 0 && (
                     <li key={j}>{sli.description}: <b>{sli.shipped}</b></li>
@@ -429,8 +429,8 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
                 )}
               </ul>
             </div>
-            {ship.notes && <div>Notes: {ship.notes}</div>}
-            <div className="text-xs text-gray-400">
+            {ship.notes && <div className="text-gray-700 dark:text-gray-300">Notes: {ship.notes}</div>}
+            <div className="text-xs text-gray-400 dark:text-gray-500">
               Recorded by {ship.recordedBy} at {formatFriendlyDate(ship.recordedAt)}
             </div>
           </li>
@@ -442,17 +442,17 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
   // ---- RECEIVE HISTORY ----
   
   function ReceiveHistory() {
-    if (!po.receivements || po.receivements.length === 0) return <div>No receive records for this PO.</div>;
+    if (!po.receivements || po.receivements.length === 0) return <div className="text-gray-600 dark:text-gray-400">No receive records for this PO.</div>;
     return (
       <ul>
         {po.receivements.map((rec, i) => (
-          <li key={i} className="mb-2 border-b pb-1">
-            <div>
+          <li key={i} className="mb-2 border-b dark:border-gray-700 pb-1">
+            <div className="text-gray-800 dark:text-gray-300">
               <b>{formatFriendlyDate(rec.dateReceived)}</b>
             </div>
-            <div>
+            <div className="text-gray-700 dark:text-gray-300">
               Items received:
-              <ul className="pl-4 text-xs">
+              <ul className="pl-4 text-xs text-gray-700 dark:text-gray-300">
                 {rec.receivedLineItems.map((rli, j) =>
                   rli.received > 0 && (
                     <li key={j}>{rli.description}: <b>{rli.received}</b></li>
@@ -460,8 +460,8 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
                 )}
               </ul>
             </div>
-            {rec.notes && <div>Notes: {rec.notes}</div>}
-            <div className="text-xs text-gray-400">
+            {rec.notes && <div className="text-gray-700 dark:text-gray-300">Notes: {rec.notes}</div>}
+            <div className="text-xs text-gray-400 dark:text-gray-500">
               Recorded by {rec.recordedBy} at {formatFriendlyDate(rec.recordedAt)}
             </div>
           </li>
@@ -472,9 +472,9 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
 
   // ---- BADGE ----
   const badge = (() => {
-    const { color, emoji, label } = statusInfo[formState.status] || { color: "bg-gray-200 text-gray-600", emoji: "❓", label: formState.status };
+    const { color, emoji, label } = statusInfo[formState.status] || { color: "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300", emoji: "❓", label: formState.status };
     return (
-      <span className={`inline-flex items-center rounded-full px-3 py-1 ml-3 text-base font-semibold ${color} border border-gray-200 shadow-sm`}>
+      <span className={`inline-flex items-center rounded-full px-3 py-1 ml-3 text-base font-semibold ${color} border border-gray-200 dark:border-gray-700 shadow-sm`}>
         <span className="mr-1 text-lg">{emoji}</span>
         {label}
       </span>
@@ -484,22 +484,22 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
   // ---- LINE ITEMS TABLES ----
   const lineItemsEditTable = (
     <div className="mb-6">
-      <label className="block font-medium mb-1">Line Items</label>
-      <table className="min-w-full border rounded mb-2">
-        <thead>
+      <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Line Items</label>
+      <table className="min-w-full border rounded mb-2 dark:border-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-700">
           <tr>
-            <th className="px-2 py-1">Description</th>
-            <th className="px-2 py-1">Category</th>
-            <th className="px-2 py-1">Catalog Item</th>
-            <th className="px-2 py-1">Qty</th>
-            <th className="px-2 py-1">Unit Price</th>
-            <th className="px-2 py-1">Total</th>
+            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Description</th>
+            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Category</th>
+            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Catalog Item</th>
+            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Qty</th>
+            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Unit Price</th>
+            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Total</th>
             <th className="px-2 py-1"></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-white dark:bg-gray-800">
           {formState.lineItems.map((li, idx) => (
-            <tr key={idx}>
+            <tr key={idx} className="border-t dark:border-gray-700">
               <td>
                 <input
                   type="text"
@@ -533,7 +533,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
                 </select>
                 {li.category === 'Part' && (
                   <button
-                    className="ml-2 px-2 py-1 bg-green-200 rounded text-xs"
+                    className="ml-2 px-2 py-1 bg-green-200 dark:bg-green-700 rounded text-xs text-gray-800 dark:text-gray-200"
                     type="button"
                     onClick={() => {
                       setShowCreatePart(true);
@@ -543,7 +543,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
                 )}
                 {li.category === 'Device' && (
                   <button
-                    className="ml-2 px-2 py-1 bg-green-200 rounded text-xs"
+                    className="ml-2 px-2 py-1 bg-green-200 dark:bg-green-700 rounded text-xs text-gray-800 dark:text-gray-200"
                     type="button"
                     onClick={() => {
                       setShowCreateInventory(true);
@@ -573,13 +573,13 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
                   />
                 </div>
               </td>
-              <td>
+              <td className="text-gray-800 dark:text-gray-200">
                 {formatMoney(Number(li.quantity) * Number(li.unitPrice || 0))}
               </td>
               <td>
                 <button
                   type="button"
-                  className="px-2 py-1 bg-red-300 rounded text-xs"
+                  className="px-2 py-1 bg-red-300 dark:bg-red-700 rounded text-xs text-gray-800 dark:text-gray-200"
                   onClick={() => handleRemoveLine(idx)}
                 >Remove</button>
               </td>
@@ -589,7 +589,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
       </table>
       <button
         type="button"
-        className="mt-2 px-4 py-2 bg-green-600 text-white rounded"
+        className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
         onClick={handleAddLine}
       >+ Add Line Item</button>
     </div>
@@ -597,27 +597,27 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
 
   const lineItemsViewTable = (
     <div className="mb-6">
-      <label className="block font-medium mb-1">Line Items</label>
-      <table className="min-w-full border rounded mb-2">
-        <thead>
+      <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Line Items</label>
+      <table className="min-w-full border rounded mb-2 dark:border-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-700">
           <tr>
-            <th className="px-2 py-1">Description</th>
-            <th className="px-2 py-1">Category</th>
-            <th className="px-2 py-1">Catalog Item</th>
-            <th className="px-2 py-1">Qty</th>
-            <th className="px-2 py-1">Unit Price</th>
-            <th className="px-2 py-1">Total</th>
+            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Description</th>
+            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Category</th>
+            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Catalog Item</th>
+            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Qty</th>
+            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Unit Price</th>
+            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Total</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-white dark:bg-gray-800">
           {formState.lineItems.map((li, idx) => (
-            <tr key={idx}>
-              <td>{li.description}</td>
-              <td>{li.category}</td>
-              <td>{getLinkedDisplay(li)}</td>
-              <td>{li.quantity}</td>
-              <td>{formatMoney(li.unitPrice)}</td>
-              <td>{formatMoney(Number(li.quantity) * Number(li.unitPrice || 0))}</td>
+            <tr key={idx} className="border-t dark:border-gray-700">
+              <td className="px-2 py-1 text-gray-800 dark:text-gray-200">{li.description}</td>
+              <td className="px-2 py-1 text-gray-800 dark:text-gray-200">{li.category}</td>
+              <td className="px-2 py-1 text-gray-800 dark:text-gray-200">{getLinkedDisplay(li)}</td>
+              <td className="px-2 py-1 text-gray-800 dark:text-gray-200">{li.quantity}</td>
+              <td className="px-2 py-1 text-gray-800 dark:text-gray-200">{formatMoney(li.unitPrice)}</td>
+              <td className="px-2 py-1 text-gray-800 dark:text-gray-200">{formatMoney(Number(li.quantity) * Number(li.unitPrice || 0))}</td>
             </tr>
           ))}
         </tbody>
@@ -631,7 +631,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
   const poHeaderFields = (
     <div className="mb-6 flex flex-col md:flex-row gap-4">
       <div className="flex-1">
-        <label className="block font-medium mb-1">Vendor</label>
+        <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Vendor</label>
         {editMode ? (
           <input
             type="text"
@@ -639,10 +639,10 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
             value={formState.vendor}
             onChange={e => setFormState(f => ({ ...f, vendor: e.target.value }))}
           />
-        ) : <div>{formState.vendor}</div>}
+        ) : <div className="text-gray-800 dark:text-gray-200">{formState.vendor}</div>}
       </div>
       <div className="flex-1">
-        <label className="block font-medium mb-1">Vendor Order #</label>
+        <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Vendor Order #</label>
         {editMode ? (
           <input
             type="text"
@@ -650,10 +650,10 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
             value={formState.vendorOrderNumber}
             onChange={e => setFormState(f => ({ ...f, vendorOrderNumber: e.target.value }))}
           />
-        ) : <div>{formState.vendorOrderNumber || '-'}</div>}
+        ) : <div className="text-gray-800 dark:text-gray-200">{formState.vendorOrderNumber || '-'}</div>}
       </div>
       <div className="flex-1">
-        <label className="block font-medium mb-1">Order Date</label>
+        <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Order Date</label>
         {editMode ? (
           <input
             type="date"
@@ -661,7 +661,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
             value={formState.date}
             onChange={e => setFormState(f => ({ ...f, date: e.target.value }))}
           />
-        ) : <div>{formatFriendlyDate(formState.date)}</div>}
+        ) : <div className="text-gray-800 dark:text-gray-200">{formatFriendlyDate(formState.date)}</div>}
       </div>
     </div>
   );
@@ -670,7 +670,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
   const poSummaryFields = (
     <div className="mb-6 flex flex-col md:flex-row gap-4">
       <div className="flex-1">
-        <label className="block font-medium mb-1">Tax</label>
+        <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Tax</label>
         {editMode ? (
           <div className={dollarInputWrapper}>
             <span className={dollarPrefix}>$</span>
@@ -682,10 +682,10 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
               onChange={e => setFormState(f => ({ ...f, tax: e.target.value.replace(/[^0-9.]/g, '') }))}
             />
           </div>
-        ) : formatMoney(formState.tax)}
+        ) : <div className="text-gray-800 dark:text-gray-200">{formatMoney(formState.tax)}</div>}
       </div>
       <div className="flex-1">
-        <label className="block font-medium mb-1">Shipping Cost</label>
+        <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Shipping Cost</label>
         {editMode ? (
           <div className={dollarInputWrapper}>
             <span className={dollarPrefix}>$</span>
@@ -697,10 +697,10 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
               onChange={e => setFormState(f => ({ ...f, shippingCost: e.target.value.replace(/[^0-9.]/g, '') }))}
             />
           </div>
-        ) : formatMoney(formState.shippingCost)}
+        ) : <div className="text-gray-800 dark:text-gray-200">{formatMoney(formState.shippingCost)}</div>}
       </div>
       <div className="flex-1">
-        <label className="block font-medium mb-1">Other Fees</label>
+        <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Other Fees</label>
         {editMode ? (
           <div className={dollarInputWrapper}>
             <span className={dollarPrefix}>$</span>
@@ -712,15 +712,15 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
               onChange={e => setFormState(f => ({ ...f, otherFees: e.target.value.replace(/[^0-9.]/g, '') }))}
             />
           </div>
-        ) : formatMoney(formState.otherFees)}
+        ) : <div className="text-gray-800 dark:text-gray-200">{formatMoney(formState.otherFees)}</div>}
       </div>
       <div className="flex-1">
-        <label className="block font-medium mb-1">Subtotal</label>
-        <div>{formatMoney(subtotal)}</div>
+        <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Subtotal</label>
+        <div className="text-gray-800 dark:text-gray-200">{formatMoney(subtotal)}</div>
       </div>
       <div className="flex-1">
-        <label className="block font-medium mb-1">Total</label>
-        <div>{formatMoney(total)}</div>
+        <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Total</label>
+        <div className="text-gray-800 dark:text-gray-200">{formatMoney(total)}</div>
       </div>
     </div>
   );
@@ -729,7 +729,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 w-full max-w-7xl relative flex flex-col h-[98vh]">
-          <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+          <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-xl">&times;</button>
           <div className="flex items-center mb-4">
             <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
               Purchase Order Details
@@ -743,26 +743,26 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
             {editMode ? lineItemsEditTable : lineItemsViewTable}
             {/* Notes */}
             <div className="mb-6">
-              <label className="block font-medium mb-1">Notes</label>
+              <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Notes</label>
               {editMode ? (
                 <textarea
                   className={inputClass}
                   value={formState.notes}
                   onChange={e => setFormState(f => ({ ...f, notes: e.target.value }))}
                 />
-              ) : <div className="whitespace-pre-line">{formState.notes}</div>}
+              ) : <div className="whitespace-pre-line text-gray-800 dark:text-gray-200">{formState.notes}</div>}
             </div>
             {/* PO summary fields (Tax, Shipping, Fees, Subtotal, Total) */}
             {poSummaryFields}
             {/* Status History */}
             <div className="mb-6">
-              <label className="block font-medium mb-1">Status History</label>
+              <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Status History</label>
               {statusHistory.length === 0 ? (
-                <div className="text-gray-400 text-sm">No status changes recorded yet.</div>
+                <div className="text-gray-400 dark:text-gray-500 text-sm">No status changes recorded yet.</div>
               ) : (
                 <ul className="text-sm bg-gray-100 dark:bg-gray-700 rounded p-2 space-y-1 max-h-32 overflow-y-auto">
                   {statusHistory.map((entry, i) => (
-                    <li key={i}>
+                    <li key={i} className="text-gray-800 dark:text-gray-200">
                       <span className="font-semibold">{entry.status}</span>
                       {" by "}
                       <span>{entry.by}</span>
@@ -776,17 +776,17 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
             </div>
             {/* Payment History */}
             <div className="mb-6">
-              <label className="block font-medium mb-1">Payment History</label>
+              <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Payment History</label>
               <PaymentHistory />
             </div>
             {/* Shipment History */}
             <div className="mb-6">
-              <label className="block font-medium mb-1">Shipment History</label>
+              <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Shipment History</label>
               <ShipmentHistory />
             </div>
             {/* Receive History */}
             <div className="mb-6">
-              <label className="block font-medium mb-1">Receive History</label>
+              <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Receive History</label>
               <ReceiveHistory />
             </div>
           </div>
@@ -827,7 +827,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
               <>
                 <button
                   type="button"
-                  className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
+                  className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-500"
                   onClick={() => {
                     setEditMode(false);
                     setFormState({
@@ -866,7 +866,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
             )}
             <button
               type="button"
-              className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400"
+              className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-500"
               onClick={onClose}
             >Close
             </button>
