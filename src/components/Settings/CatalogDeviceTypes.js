@@ -11,8 +11,7 @@ import {
 } from 'firebase/firestore';
 
 import {
-TrashIcon,
-PencilIcon
+TrashIcon
 } from '../icons';
 
 import logError from '../../utils/logError';
