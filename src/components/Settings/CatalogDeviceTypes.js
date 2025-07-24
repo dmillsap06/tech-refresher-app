@@ -15,6 +15,8 @@ TrashIcon,
 PencilIcon
 } from '../icons';
 
+import logError from '../../utils/logError';
+
 const CatalogDeviceTypes = ({ userProfile, showNotification }) => {
   const [deviceTypes, setDeviceTypes] = useState([]);
   const [brands, setBrands] = useState([]);
