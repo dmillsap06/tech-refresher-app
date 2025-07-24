@@ -15,14 +15,14 @@ const defaultLineItem = {
   linkedId: ''
 };
 
-const inputClass = "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full text-center";
+const inputClass = "border border-gray-300 dark:border-gray-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100 w-full";
 const dollarInputWrapper = "relative";
-const dollarPrefix = "absolute left-2 inset-y-0 flex items-center text-gray-400 pointer-events-none";
+const dollarPrefix = "absolute left-3 inset-y-0 flex items-center text-gray-400 pointer-events-none";
 
-function formatMoney(val) {
+const formatMoney = (val) => {
   if (val === '' || isNaN(val)) return '';
   return Number(val).toFixed(2);
-}
+};
 
 const categoryDisplayMap = {
   Part: "Part",
@@ -56,6 +56,8 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const [showCreateModal, setShowCreateModal] = useState({ open: false, category: null, lineIdx: null });
 
   const latestFetchRef = useRef({});
+  
+  // Debounce search terms
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerms(searchTerms), 200);
     return () => clearTimeout(handler);
@@ -65,6 +67,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     if (!userProfile?.groupId) return;
     setCatalogLoading(prev => ({ ...prev, [lineIdx]: true }));
     setCatalogErrors(prev => ({ ...prev, [lineIdx]: undefined }));
+    
     let col;
     if (category === "Part") col = "parts";
     else if (category === "Accessory") col = "accessories";
@@ -94,6 +97,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
 
     const thisFetchId = Math.random().toString(36).substr(2, 9);
     latestFetchRef.current[lineIdx] = thisFetchId;
+    
     try {
       const snap = await getDocs(q);
       if (latestFetchRef.current[lineIdx] === thisFetchId) {
@@ -120,6 +124,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   }, [debouncedSearchTerms, lineItems.map(i => i.category).join(",")]);
 
   const dropdownRefs = useRef({});
+  
   const handleDropdownKeyDown = (idx, filteredCatalog, e) => {
     let curIdx = dropdownActiveIdx[idx] ?? -1;
     if (e.key === "ArrowDown") {
@@ -157,6 +162,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   };
 
   const handleAddLine = () => setLineItems(items => [...items, { ...defaultLineItem }]);
+  
   const handleRemoveLine = (index) => setLineItems(items => items.filter((_, i) => i !== index));
 
   const subtotal = lineItems.reduce((sum, li) =>
@@ -226,6 +232,8 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
+    
+    // Validate that all line items are linked to a catalog item
     for (const li of lineItems) {
       if (!li.linkedId) {
         showNotification('All line items must be linked to a catalog item.', 'error');
@@ -233,6 +241,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
         return;
       }
     }
+    
     try {
       const poData = {
         poNumber: '',
@@ -263,6 +272,7 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
           }
         ]
       };
+      
       await addDoc(collection(db, 'purchase_orders'), poData);
       showNotification('Purchase Order created!', 'success');
       onClose();
@@ -276,227 +286,374 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-7xl relative flex flex-col h-[98vh]">
-        <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-700 text-xl">&times;</button>
-        <h2 className="text-2xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">New Purchase Order</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          {/* Vendor + Date Row */}
-          <div className="flex flex-col md:flex-row gap-4 mb-3">
-            <div className="flex-1">
-              <label className="block font-medium mb-1">Vendor</label>
-              <input type="text" className={inputClass} value={vendor} onChange={e => setVendor(e.target.value)} required />
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-7xl relative flex flex-col h-[95vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4 mb-5">
+          <h2 className="text-xl font-bold text-indigo-700 dark:text-indigo-300">New Purchase Order</h2>
+          <button 
+            onClick={onClose} 
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            aria-label="Close"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Main Content Area - Scrollable */}
+          <div className="flex-1 overflow-y-auto pr-2">
+            {/* Vendor, Vendor Order #, and Date on one row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Vendor <span className="text-red-500">*</span>
+                </label>
+                <input 
+                  type="text" 
+                  className={inputClass} 
+                  value={vendor} 
+                  onChange={e => setVendor(e.target.value)} 
+                  placeholder="Vendor name"
+                  required 
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Vendor Order #
+                </label>
+                <input 
+                  type="text" 
+                  className={inputClass} 
+                  value={vendorOrderNumber} 
+                  onChange={e => setVendorOrderNumber(e.target.value)} 
+                  placeholder="Optional"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Order Date <span className="text-red-500">*</span>
+                </label>
+                <input 
+                  type="date" 
+                  className={inputClass} 
+                  value={date} 
+                  onChange={e => setDate(e.target.value)} 
+                  required 
+                />
+              </div>
             </div>
-            <div className="w-full md:w-40">
-              <label className="block font-medium mb-1">Date</label>
-              <input type="date" className={inputClass} value={date} onChange={e => setDate(e.target.value)} required />
+            
+            {/* Notes */}
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Notes
+              </label>
+              <textarea 
+                className={inputClass + " resize-none"} 
+                value={notes} 
+                onChange={e => setNotes(e.target.value)} 
+                rows={2} 
+                placeholder="Add notes or explain 'Other Fees' here..."
+              />
             </div>
-          </div>
-          {/* Vendor Order # */}
-          <div className="mb-3">
-            <label className="block font-medium mb-1">Vendor Order #</label>
-            <input type="text" className={inputClass} value={vendorOrderNumber} onChange={e => setVendorOrderNumber(e.target.value)} />
-          </div>
-          {/* Notes */}
-          <div className="mb-3">
-            <label className="block font-medium mb-1">Notes</label>
-            <textarea className={inputClass} value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Add notes or explain 'Other Fees' here..." />
-          </div>
-          {/* Line Items Table */}
-          <div className="mb-3 flex-1 flex flex-col min-h-0">
-            <label className="block font-medium mb-2">Line Items</label>
-            <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: '40vh' }}>
-              <table className="min-w-full border rounded mb-2 text-sm">
-                <thead>
-                  <tr>
-                    <th className="px-2 py-1 text-center">Description</th>
-                    <th className="px-2 py-1 text-center">Qty</th>
-                    <th className="px-2 py-1 text-center">Unit Price</th>
-                    <th className="px-2 py-1 text-center">Category</th>
-                    <th className="px-2 py-1 text-center">Link</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineItems.map((item, idx) => {
-                    const category = item.category;
-                    const searchTerm = searchTerms[idx] || '';
-                    const filteredCatalog = catalogOptions[idx] || [];
-                    const isLoading = catalogLoading[idx];
-                    const hasCatalogError = !!catalogErrors[idx];
-                    const activeIdx = dropdownActiveIdx[idx] ?? -1;
+            
+            {/* Line Items Section */}
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Line Items <span className="text-red-500">*</span>
+                </label>
+                <button 
+                  type="button" 
+                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex items-center"
+                  onClick={handleAddLine}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Item
+                </button>
+              </div>
+              
+              <div className="bg-gray-50 dark:bg-gray-750 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-100 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Description
+                        </th>
+                        <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-20">
+                          Qty
+                        </th>
+                        <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
+                          Unit Price
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-28">
+                          Category
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Catalog Item
+                        </th>
+                        <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-10">
+                          <span className="sr-only">Actions</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {lineItems.map((item, idx) => {
+                        const category = item.category;
+                        const searchTerm = searchTerms[idx] || '';
+                        const filteredCatalog = catalogOptions[idx] || [];
+                        const isLoading = catalogLoading[idx];
+                        const hasCatalogError = !!catalogErrors[idx];
+                        const activeIdx = dropdownActiveIdx[idx] ?? -1;
 
-                    return (
-                      <tr key={idx}>
-                        <td className="align-middle text-center">
-                          <input type="text" className={inputClass} value={item.description} onChange={e => handleLineChange(idx, 'description', e.target.value)} required />
-                        </td>
-                        <td className="align-middle text-center">
-                          <input type="number" className={inputClass} value={item.quantity} min={1} style={{ width: 60 }} onChange={e => handleLineChange(idx, 'quantity', e.target.value)} required />
-                        </td>
-                        <td className="align-middle text-center">
-                          <div className={dollarInputWrapper}>
-                            <span className={dollarPrefix}>$</span>
-                            <input
-                              type="text"
-                              className={inputClass + " pl-6"}
-                              value={item.unitPrice}
-                              min={0}
-                              step="0.01"
-                              style={{ width: 90 }}
-                              onChange={handleLineDollarChange(idx, 'unitPrice')}
-                              onBlur={handleLineDollarBlur(idx, 'unitPrice')}
-                              required
-                              inputMode="decimal"
-                              pattern="^\d+(\.\d{1,2})?$"
-                            />
-                          </div>
-                        </td>
-                        <td className="align-middle text-center">
-                          <select className={inputClass} value={item.category} onChange={e => handleLineCategoryChange(idx, e.target.value)}>
-                            <option value="Part">Part</option>
-                            <option value="Accessory">Accessory</option>
-                            <option value="Device">Device</option>
-                            <option value="Game">Game</option>
-                          </select>
-                        </td>
-                        <td className="align-middle text-center">
-                          <div className="flex flex-col gap-1 relative">
-                            {hasCatalogError ? (
-                              <div className="text-red-500 text-sm py-2">Failed to load {category} catalog: {catalogErrors[idx]}</div>
-                            ) : (
-                              <>
+                        return (
+                          <tr key={idx} className={idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-750'}>
+                            <td className="px-3 py-2">
+                              <input 
+                                type="text" 
+                                className={inputClass + " text-sm"}
+                                value={item.description} 
+                                onChange={e => handleLineChange(idx, 'description', e.target.value)} 
+                                placeholder="Item description"
+                                required 
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input 
+                                type="number" 
+                                className={inputClass + " text-sm text-center"} 
+                                value={item.quantity} 
+                                min={1} 
+                                onChange={e => handleLineChange(idx, 'quantity', e.target.value)} 
+                                required 
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className={dollarInputWrapper}>
+                                <span className={dollarPrefix}>$</span>
                                 <input
                                   type="text"
-                                  className={inputClass + " mb-1"}
-                                  placeholder={`Search ${categoryDisplayMap[category]}...`}
-                                  value={searchTerm}
-                                  onChange={e => handleSearchChange(idx, e.target.value)}
-                                  onKeyDown={e => handleDropdownKeyDown(idx, filteredCatalog, e)}
-                                  autoComplete="off"
+                                  className={inputClass + " pl-7 text-sm text-right"} 
+                                  value={item.unitPrice}
+                                  onChange={handleLineDollarChange(idx, 'unitPrice')}
+                                  onBlur={handleLineDollarBlur(idx, 'unitPrice')}
+                                  required
+                                  inputMode="decimal"
+                                  placeholder="0.00"
                                 />
-                                <div className="relative">
-                                  <select
-                                    ref={el => (dropdownRefs.current[`${idx}`] = el)}
-                                    className={inputClass + " appearance-none"}
-                                    value={item.linkedId || ''}
-                                    onChange={e => handleLinkSelect(idx, e.target.value)}
-                                    required
-                                    size={Math.min(filteredCatalog.length + 2, 8)}
-                                    style={{ width: "100%" }}
-                                    onBlur={() => setDropdownActiveIdx(d => ({ ...d, [idx]: -1 }))}
-                                  >
-                                    <option value="" disabled>
-                                      {isLoading
-                                        ? "Loading..."
-                                        : filteredCatalog.length === 0 && searchTerm
-                                          ? "No matches"
-                                          : `Select ${categoryDisplayMap[category]}...`}
-                                    </option>
-                                    {filteredCatalog.map((catItem, i) => (
-                                      <option
-                                        key={catItem.id}
-                                        value={catItem.id}
-                                        style={{
-                                          background: activeIdx === i ? "#e0e7ff" : "",
-                                          color: activeIdx === i ? "#3730a3" : ""
-                                        }}
-                                      >
-                                        {catItem.name}
-                                      </option>
-                                    ))}
-                                    <option value="_create_new">+ Add New {categoryDisplayMap[category]}...</option>
-                                  </select>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <select 
+                                className={inputClass + " text-sm"} 
+                                value={item.category} 
+                                onChange={e => handleLineCategoryChange(idx, e.target.value)}
+                              >
+                                <option value="Part">Part</option>
+                                <option value="Accessory">Accessory</option>
+                                <option value="Device">Device</option>
+                                <option value="Game">Game</option>
+                              </select>
+                            </td>
+                            <td className="px-3 py-2">
+                              {hasCatalogError ? (
+                                <div className="text-red-500 text-xs py-1">
+                                  Failed to load catalog: {catalogErrors[idx]}
                                 </div>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                        <td className="align-middle text-center">
-                          {lineItems.length > 1 && (
-                            <button type="button" className="text-red-500 text-lg px-2" onClick={() => handleRemoveLine(idx)} title="Remove">×</button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <button type="button" className="text-indigo-600 hover:underline text-sm" onClick={handleAddLine}>+ Add Line Item</button>
-          </div>
-          {/* Shipping Cost & Other Fees */}
-          <div className="mb-3 flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <label className="block font-medium mb-1">Shipping Cost</label>
-              <div className={dollarInputWrapper}>
-                <span className={dollarPrefix}>$</span>
-                <input
-                  type="text"
-                  className={inputClass + " pl-6"}
-                  value={shippingCost}
-                  min={0}
-                  step="0.01"
-                  onChange={handleDollarChange(setShippingCost)}
-                  onBlur={handleDollarBlur(setShippingCost)}
-                  inputMode="decimal"
-                  pattern="^\d+(\.\d{1,2})?$"
-                />
+                              ) : (
+                                <div className="flex flex-col gap-1">
+                                  <input
+                                    type="text"
+                                    className={inputClass + " text-sm"}
+                                    placeholder={`Search ${categoryDisplayMap[category]}...`}
+                                    value={searchTerm}
+                                    onChange={e => handleSearchChange(idx, e.target.value)}
+                                    onKeyDown={e => handleDropdownKeyDown(idx, filteredCatalog, e)}
+                                    autoComplete="off"
+                                  />
+                                  <div className="relative">
+                                    <select
+                                      ref={el => (dropdownRefs.current[`${idx}`] = el)}
+                                      className={inputClass + " text-sm"}
+                                      value={item.linkedId || ''}
+                                      onChange={e => handleLinkSelect(idx, e.target.value)}
+                                      required
+                                      size={Math.min(filteredCatalog.length + 2, 6)}
+                                    >
+                                      <option value="" disabled>
+                                        {isLoading
+                                          ? "Loading..."
+                                          : filteredCatalog.length === 0 && searchTerm
+                                            ? "No matches"
+                                            : `Select ${categoryDisplayMap[category]}...`}
+                                      </option>
+                                      {filteredCatalog.map((catItem, i) => (
+                                        <option
+                                          key={catItem.id}
+                                          value={catItem.id}
+                                          className={activeIdx === i ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300" : ""}
+                                        >
+                                          {catItem.name}
+                                        </option>
+                                      ))}
+                                      <option value="_create_new" className="font-medium text-indigo-600 dark:text-indigo-400">
+                                        + Add New {categoryDisplayMap[category]}...
+                                      </option>
+                                    </select>
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {lineItems.length > 1 && (
+                                <button 
+                                  type="button" 
+                                  className="text-red-500 hover:text-red-700 dark:hover:text-red-400"
+                                  onClick={() => handleRemoveLine(idx)} 
+                                  title="Remove item"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-            <div className="flex-1">
-              <label className="block font-medium mb-1">Other Fees <span className="text-xs text-gray-400">(describe in notes)</span></label>
-              <div className={dollarInputWrapper}>
-                <span className={dollarPrefix}>$</span>
-                <input
-                  type="text"
-                  className={inputClass + " pl-6"}
-                  value={otherFees}
-                  min={0}
-                  step="0.01"
-                  onChange={handleDollarChange(setOtherFees)}
-                  onBlur={handleDollarBlur(setOtherFees)}
-                  inputMode="decimal"
-                  pattern="^\d+(\.\d{1,2})?$"
-                />
+            
+            {/* Costs Section - Two columns on larger screens */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Additional Costs</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Shipping Cost
+                    </label>
+                    <div className={dollarInputWrapper}>
+                      <span className={dollarPrefix}>$</span>
+                      <input
+                        type="text"
+                        className={inputClass + " pl-7"} 
+                        value={shippingCost}
+                        onChange={handleDollarChange(setShippingCost)}
+                        onBlur={handleDollarBlur(setShippingCost)}
+                        inputMode="decimal"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Tax
+                    </label>
+                    <div className={dollarInputWrapper}>
+                      <span className={dollarPrefix}>$</span>
+                      <input
+                        type="text"
+                        className={inputClass + " pl-7"} 
+                        value={tax}
+                        onChange={handleDollarChange(setTax)}
+                        onBlur={handleDollarBlur(setTax)}
+                        inputMode="decimal"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Other Fees <span className="text-xs text-gray-400">(describe in notes)</span>
+                    </label>
+                    <div className={dollarInputWrapper}>
+                      <span className={dollarPrefix}>$</span>
+                      <input
+                        type="text"
+                        className={inputClass + " pl-7"} 
+                        value={otherFees}
+                        onChange={handleDollarChange(setOtherFees)}
+                        onBlur={handleDollarBlur(setOtherFees)}
+                        inputMode="decimal"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Order Summary</h3>
+                <div className="bg-gray-50 dark:bg-gray-750 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <dl className="space-y-2">
+                    <div className="flex justify-between">
+                      <dt className="text-sm text-gray-500 dark:text-gray-400">Subtotal:</dt>
+                      <dd className="text-sm font-medium">${formatMoney(subtotal)}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-sm text-gray-500 dark:text-gray-400">Shipping:</dt>
+                      <dd className="text-sm font-medium">${formatMoney(shippingCost || 0)}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-sm text-gray-500 dark:text-gray-400">Tax:</dt>
+                      <dd className="text-sm font-medium">${formatMoney(tax || 0)}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-sm text-gray-500 dark:text-gray-400">Other Fees:</dt>
+                      <dd className="text-sm font-medium">${formatMoney(otherFees || 0)}</dd>
+                    </div>
+                    <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
+                      <div className="flex justify-between">
+                        <dt className="text-base font-medium text-gray-900 dark:text-white">Total:</dt>
+                        <dd className="text-base font-bold text-gray-900 dark:text-white">${formatMoney(total)}</dd>
+                      </div>
+                    </div>
+                  </dl>
+                </div>
               </div>
             </div>
           </div>
-          {/* Tax + Totals */}
-          <div className="mb-3 flex flex-wrap gap-4 justify-end">
-            <div>
-              <label className="block text-xs text-gray-500">Subtotal</label>
-              <div className="font-medium">${formatMoney(subtotal)}</div>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500">Tax</label>
-              <div className={dollarInputWrapper + " w-20"}>
-                <span className={dollarPrefix}>$</span>
-                <input
-                  type="text"
-                  className={inputClass + " pl-6"}
-                  value={tax}
-                  min={0}
-                  step="0.01"
-                  onChange={handleDollarChange(setTax)}
-                  onBlur={handleDollarBlur(setTax)}
-                  inputMode="decimal"
-                  pattern="^\d+(\.\d{1,2})?$"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500">Total</label>
-              <div className="font-bold">${formatMoney(total)}</div>
-            </div>
-          </div>
-          {/* Buttons */}
-          <div className="flex justify-end gap-3 mt-5">
-            <button type="button" className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400" onClick={onClose}>Cancel</button>
-            <button type="submit" className="px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700" disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save Purchase Order"}
+          
+          {/* Footer with action buttons */}
+          <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-gray-200 dark:border-gray-700">
+            <button 
+              type="button" 
+              className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" 
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="px-5 py-2 rounded-md bg-indigo-600 text-white font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors" 
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : "Save Purchase Order"}
             </button>
           </div>
         </form>
+        
         {/* Add New Modals */}
         {showCreateModal.open && showCreateModal.category === "Part" && (
           <CreatePartModal
