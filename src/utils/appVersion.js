@@ -8,9 +8,46 @@
  */
 
 const appVersion = {
-  version: '1.2.0',
+  version: '1.3.0',
   lastUpdated: '2025-07-24',
   versionHistory: [
+  {
+      version: '1.3.0',
+      date: '2025-07-24',
+      timestamp: '2025-07-24 15:04:27',
+      author: 'dmillsap06',
+      changes: [
+        'Updated login and registration pages with EST timezone display',
+        'Added password visibility toggle for better user experience',
+        'Implemented password strength indicator with visual feedback',
+        'Added "Remember me" option for login persistence',
+        'Enhanced form validation with better error messages',
+        'Improved accessibility with aria-labels and button roles',
+        'Added better visual cues for password matching in registration form'
+      ]
+    },
+    {
+      version: '1.2.2',
+      date: '2025-07-24',
+      timestamp: '2025-07-24 14:53:00',
+      author: 'dmillsap06',
+      changes: [
+        'Renamed InventoryPage to DevicesPage for clearer component naming',
+        'Removed unused components/inventory/InventoryPage component',
+        'Consolidated inventory management pages under consistent naming scheme'
+      ]
+    },
+    {
+      version: '1.2.1',
+      date: '2025-07-24',
+      timestamp: '2025-07-24 14:51:24',
+      author: 'dmillsap06',
+      changes: [
+        'Fixed import path for CustomerOrdersPage component',
+        'Corrected directory structure reference for orders components',
+        'Updated component locations in App.js import statements'
+      ]
+    },
     {
       version: '1.2.0',
       date: '2025-07-24',

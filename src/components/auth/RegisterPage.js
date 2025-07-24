@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db, auth } from '../../firebase';
 import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, setPersistence, browserLocalPersistence } from "firebase/auth";
@@ -12,12 +12,81 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
   const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Function to get current time in EST format
+  const getCurrentEstTime = () => {
+    const now = new Date();
+    const options = {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    };
+    
+    return new Intl.DateTimeFormat('en-US', options)
+      .format(now)
+      .replace(/(\d+)\/(\d+)\/(\d+), (\d+):(\d+):(\d+)/, '$3-$1-$2 $4:$5:$6');
+  };
+
+  // Calculate password strength
+  useEffect(() => {
+    if (!password) {
+      setPasswordStrength(0);
+      return;
+    }
+
+    let strength = 0;
+    // Length check
+    if (password.length >= 8) strength += 1;
+    // Uppercase letter check
+    if (/[A-Z]/.test(password)) strength += 1;
+    // Lowercase letter check
+    if (/[a-z]/.test(password)) strength += 1;
+    // Number check
+    if (/[0-9]/.test(password)) strength += 1;
+    // Special character check
+    if (/[^A-Za-z0-9]/.test(password)) strength += 1;
+
+    setPasswordStrength(strength);
+  }, [password]);
+
+  const getStrengthColor = () => {
+    if (passwordStrength <= 2) return 'bg-red-500';
+    if (passwordStrength <= 3) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+
+  const getStrengthText = () => {
+    if (passwordStrength <= 2) return 'Weak';
+    if (passwordStrength <= 3) return 'Moderate';
+    return 'Strong';
+  };
 
   const validateForm = async () => {
     if (!email.trim() || !username.trim() || !firstName.trim() || !lastName.trim() || !password || !confirmPassword) {
       setError('All fields are required.');
+      return false;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address.');
+      return false;
+    }
+
+    // Username validation (alphanumeric, 3-20 chars)
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    if (!usernameRegex.test(username)) {
+      setError('Username must be 3-20 characters and contain only letters, numbers, and underscores.');
       return false;
     }
 
@@ -26,8 +95,8 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
       return false;
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
+    if (password.length < 8 || passwordStrength < 3) {
+      setError('Password is too weak. It should be at least 8 characters and include a mix of letters, numbers, and special characters.');
       return false;
     }
 
@@ -140,6 +209,7 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
                   onChange={e => setFirstName(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="First name"
+                  aria-label="First name"
                 />
               </div>
               <div>
@@ -156,6 +226,7 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
                   onChange={e => setLastName(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="Last name"
+                  aria-label="Last name"
                 />
               </div>
             </div>
@@ -174,6 +245,7 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
                 onChange={e => setEmail(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 placeholder="your.email@example.com"
+                aria-label="Email address"
               />
             </div>
             
@@ -191,43 +263,86 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
                 onChange={e => setUsername(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 placeholder="Choose a username"
+                aria-label="Username"
               />
+              <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
+                3-20 characters, letters, numbers, and underscores only.
+              </p>
             </div>
             
             <div>
               <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Password
               </label>
-              <input
-                id="new-password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="Create a password"
-                minLength={8}
-              />
+              <div className="relative">
+                <input
+                  id="new-password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Create a password"
+                  minLength={8}
+                  aria-label="Password"
+                />
+                <button 
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                      <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                      <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              
+              {/* Password strength indicator */}
+              {password && (
+                <div className="mt-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div className={`h-2.5 rounded-full ${getStrengthColor()}`} style={{ width: `${(passwordStrength / 5) * 100}%` }}></div>
+                  </div>
+                  <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
+                    Password strength: <span className="font-medium">{getStrengthText()}</span>
+                  </p>
+                </div>
+              )}
             </div>
             
             <div>
               <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Confirm Password
               </label>
-              <input
-                id="confirm-password"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                placeholder="Confirm your password"
-                minLength={8}
-              />
+              <div className="relative">
+                <input
+                  id="confirm-password"
+                  name="confirmPassword"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  className={`w-full px-4 py-2 border ${password && confirmPassword && password !== confirmPassword ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                  placeholder="Confirm your password"
+                  minLength={8}
+                  aria-label="Confirm password"
+                />
+              </div>
+              {password && confirmPassword && password !== confirmPassword && (
+                <p className="text-xs mt-1 text-red-500">Passwords do not match</p>
+              )}
             </div>
 
             <div>
@@ -267,7 +382,7 @@ const RegisterPage = ({ onSignUp, onSwitchToLogin, showNotification }) => {
       
       <div className="mt-8 text-center text-xs text-white/70">
         <p>© {new Date().getFullYear()} Tech Refresher. All rights reserved.</p>
-        <p className="mt-1">Current Time (UTC): {new Date().toISOString().replace('T', ' ').substring(0, 19)}</p>
+        <p className="mt-1">Current Time (EST): {getCurrentEstTime()}</p>
       </div>
     </div>
   );
