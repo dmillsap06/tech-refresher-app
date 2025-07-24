@@ -20,7 +20,6 @@ import CustomerOrdersPage from './components/orders/CustomerOrdersPage';
 import ArchivedOrdersPage from './components/orders/ArchivedOrdersPage';
 
 // Inventory
-import InventoryPage from './components/inventory/InventoryPage';
 import DevicesPage from './components/inventory/DevicesPage';
 import PartsPage from './components/inventory/PartsPage';
 import AccessoriesPage from './components/inventory/AccessoriesPage';
