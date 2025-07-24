@@ -279,8 +279,8 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
         archivedAt: new Date(),
         statusHistory: arrayUnion({
           status: 'Archived',
-          by: userProfile.displayName || userProfile.email,
-          at: new Date().toISOString(),
+          by: userProfile.username,
+          at: getFormattedDate,
           note: 'Work order completed and archived'
         })
       });
