@@ -14,7 +14,7 @@ import {
 import {
 TrashIcon,
 PencilIcon
-} from './icons';
+} from '../icons';
 
 import logError from '../../utils/logError';
 

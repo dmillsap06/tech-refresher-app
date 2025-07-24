@@ -13,7 +13,7 @@ import {
 import {
 TrashIcon,
 PencilIcon
-} from './icons';
+} from '../icons';
 
 const CatalogDeviceTypes = ({ userProfile, showNotification }) => {
   const [deviceTypes, setDeviceTypes] = useState([]);
