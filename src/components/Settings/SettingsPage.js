@@ -22,9 +22,6 @@ const Settings = ({ onBack, showNotification, userProfile }) => {
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
             <header className="bg-white dark:bg-gray-800 shadow-md">
                 <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex items-center">
-                    <button onClick={onBack} className="mr-4 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                        &larr; Dashboard
-                    </button>
                     <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">App Settings</h1>
                 </div>
             </header>
