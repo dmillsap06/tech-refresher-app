@@ -10,8 +10,12 @@ import {
   query,
   where,
 } from 'firebase/firestore';
-import TrashIcon from '../icons/TrashIcon';
-import PencilIcon from '../icons/PencilIcon';
+
+import {
+TrashIcon,
+PencilIcon
+} from './icons';
+
 import logError from '../../utils/logError';
 
 const CatalogAccessories = ({ userProfile, showNotification }) => {

@@ -9,8 +9,11 @@ import {
   query,
   where,
 } from 'firebase/firestore';
-import TrashIcon from '../icons/TrashIcon';
-import logError from '../../utils/logError';
+
+import {
+TrashIcon,
+PencilIcon
+} from './icons';
 
 const CatalogDeviceTypes = ({ userProfile, showNotification }) => {
   const [deviceTypes, setDeviceTypes] = useState([]);
