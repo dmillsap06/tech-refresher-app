@@ -98,7 +98,7 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
 
             </div>
           </div>
-          <div>
+          <div className="mb-8">
             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Manage</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <button onClick={() => onNavigate('orders')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
@@ -162,7 +162,7 @@ const Dashboard = ({ userProfile, onLogout, onNavigate }) => {
             </div>
           </div>
 		  {isSuperAdmin && (
-			<div>
+			<div className="mb-8">
 				<h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Admin</h2>
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 					<button onClick={() => onNavigate('errorlog')} className="group text-left p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
