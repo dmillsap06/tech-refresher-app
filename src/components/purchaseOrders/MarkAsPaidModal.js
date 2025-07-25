@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { db } from '../../firebase';
+import logError from '../../utils/logError';
 import usePaymentMethods from './usePaymentMethods';
 
 const inputClass = "border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-gray-100";
@@ -19,6 +22,10 @@ export default function MarkAsPaidModal({
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
   const [touched, setTouched] = useState(false);
+  
+  // Current date/time and username for display
+  const currentDateTime = "2025-07-25 02:22:20";
+  const currentUser = "dmillsap06";
 
   // Filtering/Disabling: Only show methods with active !== false (default is active)
   const selectableMethods = methods.filter(m => m.active !== false);
@@ -26,20 +33,28 @@ export default function MarkAsPaidModal({
   const handleSave = () => {
     setTouched(true);
     if (!datePaid || !amountPaid || isNaN(Number(amountPaid)) || !methodId) return;
+    
     const methodObj = selectableMethods.find(m => m.id === methodId);
     if (!methodObj) return;
-    onSave({
-      datePaid,
-      amountPaid: Number(amountPaid),
-      method: {
-        id: methodObj.id,
-        type: methodObj.type,
-        nickname: methodObj.nickname,
-        lastFour: methodObj.lastFour,
-      },
-      reference,
-      notes,
-    });
+    
+    try {
+      onSave({
+        datePaid,
+        amountPaid: Number(amountPaid),
+        method: {
+          id: methodObj.id,
+          type: methodObj.type,
+          nickname: methodObj.nickname,
+          lastFour: methodObj.lastFour,
+          notes: methodObj.notes // Ensure method notes are included
+        },
+        reference,
+        notes,
+      });
+    } catch (err) {
+      logError('MarkAsPaidModal-handleSave', err);
+      console.error("Error in MarkAsPaidModal:", err);
+    }
   };
 
   if (!open) return null;
@@ -47,7 +62,12 @@ export default function MarkAsPaidModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md relative">
-        <h2 className="text-xl font-bold mb-4 text-indigo-700 dark:text-indigo-300">Mark as Paid</h2>
+        <h2 className="text-xl font-bold mb-2 text-indigo-700 dark:text-indigo-300">Mark as Paid</h2>
+        
+        <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          {currentDateTime} • User: {currentUser}
+        </div>
+        
         <div className="mb-3">
           <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Date Paid<span className="text-red-500 dark:text-red-400">*</span></label>
           <input
@@ -114,13 +134,13 @@ export default function MarkAsPaidModal({
         <div className="flex justify-end gap-2 mt-6">
           <button
             type="button"
-            className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-500"
+            className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
             onClick={onClose}
             disabled={loading}
           >Cancel</button>
           <button
             type="button"
-            className={`px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 ${loading ? 'opacity-60' : ''}`}
+            className={`px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors ${loading ? 'opacity-60' : ''}`}
             disabled={loading || !datePaid || !amountPaid || isNaN(Number(amountPaid)) || !methodId}
             onClick={handleSave}
           >{loading ? 'Saving...' : 'Save'}</button>
@@ -130,7 +150,7 @@ export default function MarkAsPaidModal({
           const m = selectableMethods.find(m => m.id === methodId);
           if (!m) return null;
           return (
-            <div className="mt-4 text-xs text-gray-500 dark:text-gray-300 border-t dark:border-gray-700 pt-2">
+            <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 border-t dark:border-gray-700 pt-2">
               <div className="text-gray-700 dark:text-gray-300">Selected Payment Method:</div>
               <div className="text-gray-700 dark:text-gray-300">
                 <span className="font-semibold">{m.nickname}</span>
