@@ -1,6 +1,4 @@
-import React, { useState } from 'react';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../../firebase';
+import React, { useState, useRef } from 'react';
 import logError from '../../utils/logError';
 import usePaymentMethods from './usePaymentMethods';
 
@@ -14,6 +12,7 @@ export default function MarkAsPaidModal({
   defaultDate,
   loading,
   groupId,
+  showNotification // If your parent component provides a notification function
 }) {
   const { methods, loading: methodsLoading } = usePaymentMethods(groupId);
   const [datePaid, setDatePaid] = useState(defaultDate || new Date().toISOString().substr(0, 10));
@@ -22,9 +21,10 @@ export default function MarkAsPaidModal({
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
   const [touched, setTouched] = useState(false);
+  const errorReported = useRef(false);
   
   // Current date/time and username for display
-  const currentDateTime = "2025-07-25 02:22:20";
+  const currentDateTime = "2025-07-25 02:32:02";
   const currentUser = "dmillsap06";
 
   // Filtering/Disabling: Only show methods with active !== false (default is active)
@@ -32,13 +32,16 @@ export default function MarkAsPaidModal({
 
   const handleSave = () => {
     setTouched(true);
+    errorReported.current = false;
+    
     if (!datePaid || !amountPaid || isNaN(Number(amountPaid)) || !methodId) return;
     
     const methodObj = selectableMethods.find(m => m.id === methodId);
     if (!methodObj) return;
     
     try {
-      onSave({
+      // Create the payment data object
+      const paymentData = {
         datePaid,
         amountPaid: Number(amountPaid),
         method: {
@@ -46,14 +49,30 @@ export default function MarkAsPaidModal({
           type: methodObj.type,
           nickname: methodObj.nickname,
           lastFour: methodObj.lastFour,
-          notes: methodObj.notes // Ensure method notes are included
+          notes: methodObj.notes
         },
         reference,
         notes,
-      });
+      };
+      
+      // Call the onSave function from parent
+      onSave(paymentData);
     } catch (err) {
-      logError('MarkAsPaidModal-handleSave', err);
-      console.error("Error in MarkAsPaidModal:", err);
+      if (!errorReported.current) {
+        // Log the error to your system
+        logError('MarkAsPaidModal-handleSave', err);
+        
+        // Show an error in the console
+        console.error("Error in MarkAsPaidModal:", err);
+        
+        // Optionally show a notification to the user if showNotification is available
+        if (typeof showNotification === 'function') {
+          showNotification('Failed to mark as paid: ' + (err.message || 'Unknown error'), 'error');
+        }
+        
+        // Mark error as reported to prevent duplicate reports
+        errorReported.current = true;
+      }
     }
   };
 
