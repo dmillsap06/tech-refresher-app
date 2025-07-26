@@ -7,7 +7,6 @@ import CreateInventoryModal from './CreateInventoryModal';
 import CreatePartModal from './CreatePartModal';
 import MarkAsPaidModal from './MarkAsPaidModal';
 import MarkAsShippedModal from './MarkAsShippedModal';
-import usePaymentMethods from './usePaymentMethods';
 import useShippingCarriers from './useShippingCarriers';
 import Portal from './Portal';
 
