@@ -26,10 +26,11 @@ export default function MarkAsPaidModal({
   const [notes, setNotes] = useState('');
   const [touched, setTouched] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
+  const [internalError, setInternalError] = useState('');
   const errorReported = useRef(false);
   
   // Current date/time and username for display
-  const currentDateTime = "2025-07-26 02:29:22";
+  const currentDateTime = "2025-07-26 02:35:41";
   const currentUser = "dmillsap06";
 
   // Log when methods change
@@ -44,6 +45,7 @@ export default function MarkAsPaidModal({
   const handleSave = async () => {
     console.log("[MarkAsPaidModal] handleSave called");
     setTouched(true);
+    setInternalError('');
     errorReported.current = false;
     
     // Basic validation checks
@@ -60,6 +62,7 @@ export default function MarkAsPaidModal({
     const methodObj = selectableMethods.find(m => m.id === methodId);
     if (!methodObj) {
       console.error("[MarkAsPaidModal] Method not found:", methodId);
+      setInternalError('Invalid payment method selected');
       if (typeof showNotification === 'function') {
         showNotification('Invalid payment method selected', 'error');
       }
@@ -90,11 +93,21 @@ export default function MarkAsPaidModal({
       
       console.log("[MarkAsPaidModal] Payment data prepared:", JSON.stringify(paymentData, null, 2));
       
-      // Execute the save with error boundary
+      // Try executing the save with better error handling
       try {
         console.log("[MarkAsPaidModal] Calling onSave function...");
-        const result = await onSave(paymentData);
+        
+        // Wrap onSave in a Promise.resolve to ensure it always returns a promise
+        const result = await Promise.resolve(onSave(paymentData)).catch(err => {
+          throw err; // Re-throw to be caught by outer catch
+        });
+        
         console.log("[MarkAsPaidModal] onSave result:", result);
+        
+        // Check if result indicates success - modify this condition based on your API
+        if (result === false) {
+          throw new Error("Payment recording failed silently");
+        }
         
         // If we reach here, it was successful
         if (typeof showNotification === 'function') {
@@ -105,6 +118,10 @@ export default function MarkAsPaidModal({
         onClose();
       } catch (saveError) {
         console.error("[MarkAsPaidModal] Error in onSave:", saveError);
+        
+        // Set internal error message
+        setInternalError(saveError.message || 'Failed to record payment');
+        
         // Log the error properly
         logError('MarkAsPaidModal-onSave', saveError, {
           userId: currentUser,
@@ -124,6 +141,8 @@ export default function MarkAsPaidModal({
       }
     } catch (err) {
       console.error("[MarkAsPaidModal] Error preparing payment:", err);
+      setInternalError('Error preparing payment data');
+      
       logError('MarkAsPaidModal-preparePayment', err, {
         userId: currentUser,
         groupId,
@@ -153,6 +172,12 @@ export default function MarkAsPaidModal({
           {currentDateTime} • User: {currentUser}
         </div>
         
+        {internalError && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 text-red-700 dark:text-red-300 text-sm">
+            <strong>Error:</strong> {internalError}
+          </div>
+        )}
+        
         <div className="mb-3">
           <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Date Paid<span className="text-red-500 dark:text-red-400">*</span></label>
           <input
@@ -179,6 +204,8 @@ export default function MarkAsPaidModal({
           <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Payment Method<span className="text-red-500 dark:text-red-400">*</span></label>
           {methodsLoading ? (
             <div className="text-gray-600 dark:text-gray-400">Loading methods...</div>
+          ) : selectableMethods.length === 0 ? (
+            <div className="text-red-600 dark:text-red-400">No active payment methods available</div>
           ) : (
             <select
               className={inputClass}
