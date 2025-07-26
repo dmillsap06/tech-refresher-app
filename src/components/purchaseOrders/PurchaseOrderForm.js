@@ -294,6 +294,8 @@ const handleSubmit = async (e) => {
   try {
     // Get the formatted date once
     const formattedDate = getFormattedDate();
+    // Create actual timestamp for proper date handling
+    const now = new Date();
     
     const poData = {
       poNumber: '',
@@ -319,9 +321,9 @@ const handleSubmit = async (e) => {
       statusHistory: [
         {
           status: "Created",
-          at: formattedDate, // FIXED: Use the result of the function call
-          by: userProfile.username,
-          timestamp: new Date() // Added for better sorting/filtering
+          at: formattedDate,             // Human-readable string
+          timestamp: Timestamp.fromDate(now), // Firestore timestamp for sorting
+          by: userProfile.username
         }
       ]
     };

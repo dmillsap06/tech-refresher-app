@@ -740,25 +740,25 @@ async function handleMarkShipped(shipmentData) {
       <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Line Items</label>
       <table className="min-w-full border rounded mb-2 dark:border-gray-700">
         <thead className="bg-gray-50 dark:bg-gray-700">
-          <tr>
-            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Description</th>
-            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Category</th>
-            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Catalog Item</th>
-            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Qty</th>
-            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Unit Price</th>
-            <th className="px-2 py-1 text-gray-700 dark:text-gray-200">Total</th>
-          </tr>
-        </thead>
+  <tr>
+    <th className="px-2 py-1 text-left text-gray-700 dark:text-gray-200">Description</th>
+    <th className="px-2 py-1 text-center text-gray-700 dark:text-gray-200">Category</th>
+    <th className="px-2 py-1 text-left text-gray-700 dark:text-gray-200">Catalog Item</th>
+    <th className="px-2 py-1 text-center text-gray-700 dark:text-gray-200">Qty</th>
+    <th className="px-2 py-1 text-right text-gray-700 dark:text-gray-200">Unit Price</th>
+    <th className="px-2 py-1 text-right text-gray-700 dark:text-gray-200">Total</th>
+  </tr>
+</thead>
         <tbody className="bg-white dark:bg-gray-800">
           {formState.lineItems.map((li, idx) => (
             <tr key={idx} className="border-t dark:border-gray-700">
-              <td className="px-2 py-1 text-gray-800 dark:text-gray-200">{li.description}</td>
-              <td className="px-2 py-1 text-gray-800 dark:text-gray-200">{li.category}</td>
-              <td className="px-2 py-1 text-gray-800 dark:text-gray-200">{getLinkedDisplay(li)}</td>
-              <td className="px-2 py-1 text-gray-800 dark:text-gray-200">{li.quantity}</td>
-              <td className="px-2 py-1 text-gray-800 dark:text-gray-200">{formatMoney(li.unitPrice)}</td>
-              <td className="px-2 py-1 text-gray-800 dark:text-gray-200">{formatMoney(Number(li.quantity) * Number(li.unitPrice || 0))}</td>
-            </tr>
+  <td className="px-2 py-1 text-left text-gray-800 dark:text-gray-200">{li.description}</td>
+  <td className="px-2 py-1 text-center text-gray-800 dark:text-gray-200">{li.category}</td>
+  <td className="px-2 py-1 text-left text-gray-800 dark:text-gray-200">{getLinkedDisplay(li)}</td>
+  <td className="px-2 py-1 text-center text-gray-800 dark:text-gray-200">{li.quantity}</td>
+  <td className="px-2 py-1 text-right text-gray-800 dark:text-gray-200">{formatMoney(li.unitPrice)}</td>
+  <td className="px-2 py-1 text-right text-gray-800 dark:text-gray-200">{formatMoney(Number(li.quantity) * Number(li.unitPrice || 0))}</td>
+</tr>
           ))}
         </tbody>
       </table>
@@ -896,24 +896,29 @@ async function handleMarkShipped(shipmentData) {
             {poSummaryFields}
             {/* Status History */}
             <div className="mb-6">
-              <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Status History</label>
-              {poState.statusHistory?.length === 0 ? (
-                <div className="text-gray-400 dark:text-gray-500 text-sm">No status changes recorded yet.</div>
-              ) : (
-                <ul className="text-sm bg-gray-100 dark:bg-gray-700 rounded p-2 space-y-1 max-h-32 overflow-y-auto">
-                  {poState.statusHistory?.map((entry, i) => (
-                    <li key={i} className="text-gray-800 dark:text-gray-200">
-                      <span className="font-semibold">{entry.status}</span>
-                      {" by "}
-                      <span>{entry.by}</span>
-                      {" on "}
-                      <span title={formatFriendlyDate(entry.at)}>{formatFriendlyDate(entry.at)}</span>
-                      {entry.note ? <>: <span className="italic">{entry.note}</span></> : null}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+  <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Status History</label>
+  {poState.statusHistory?.length === 0 ? (
+    <div className="text-gray-400 dark:text-gray-500 text-sm">No status changes recorded yet.</div>
+  ) : (
+    <ul className="text-sm bg-gray-100 dark:bg-gray-700 rounded p-2 space-y-1 max-h-32 overflow-y-auto">
+      {poState.statusHistory?.map((entry, i) => (
+        <li key={i} className="text-gray-800 dark:text-gray-200">
+          <span className="font-semibold">{entry.status}</span>
+          {" by "}
+          <span>{entry.by}</span>
+          {" on "}
+          <span>
+            {/* If entry.at is already a formatted string with EST, use it directly */}
+            {typeof entry.at === 'string' && entry.at.includes('EST') 
+              ? entry.at 
+              : formatFriendlyDate(entry.timestamp || entry.at)}
+          </span>
+          {entry.note ? <>: <span className="italic">{entry.note}</span></> : null}
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
             {/* Payment History */}
             <div className="mb-6">
               <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Payment History</label>
