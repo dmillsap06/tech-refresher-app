@@ -76,6 +76,8 @@ function formatDetailedDateTime(dt) {
 }
 
 const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated }) => {
+  // Use state for the PO data to enable real-time updates
+  const [poState, setPoState] = useState(po);
   const [editMode, setEditMode] = useState(false);
   const [showMarkPaid, setShowMarkPaid] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
@@ -83,19 +85,19 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
   const [savingShipment, setSavingShipment] = useState(false);
 
   const [formState, setFormState] = useState(() => ({
-    vendor: po.vendor,
-    vendorOrderNumber: po.vendorOrderNumber || '',
-    date: po.date?.toDate?.().toISOString().substr(0, 10) || '',
-    notes: po.notes || '',
-    lineItems: po.lineItems?.map((li, idx) => ({
+    vendor: poState.vendor,
+    vendorOrderNumber: poState.vendorOrderNumber || '',
+    date: poState.date?.toDate?.().toISOString().substr(0, 10) || '',
+    notes: poState.notes || '',
+    lineItems: poState.lineItems?.map((li, idx) => ({
       ...li,
       unitPrice: (typeof li.unitPrice === 'number' && li.unitPrice === 0) ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice),
       index: idx,
     })) || [],
-    shippingCost: (typeof po.shippingCost === 'number' && po.shippingCost === 0) ? '' : (typeof po.shippingCost === 'number' ? po.shippingCost.toFixed(2) : po.shippingCost),
-    otherFees: (typeof po.otherFees === 'number' && po.otherFees === 0) ? '' : (typeof po.otherFees === 'number' ? po.otherFees.toFixed(2) : po.otherFees),
-    tax: (typeof po.tax === 'number' && po.tax === 0) ? '' : (typeof po.tax === 'number' ? po.tax.toFixed(2) : po.tax),
-    status: po.status,
+    shippingCost: (typeof poState.shippingCost === 'number' && poState.shippingCost === 0) ? '' : (typeof poState.shippingCost === 'number' ? poState.shippingCost.toFixed(2) : poState.shippingCost),
+    otherFees: (typeof poState.otherFees === 'number' && poState.otherFees === 0) ? '' : (typeof poState.otherFees === 'number' ? poState.otherFees.toFixed(2) : poState.otherFees),
+    tax: (typeof poState.tax === 'number' && poState.tax === 0) ? '' : (typeof poState.tax === 'number' ? poState.tax.toFixed(2) : poState.tax),
+    status: poState.status,
   }));
   const [saving, setSaving] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
@@ -114,7 +116,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
   useShippingCarriers(userProfile.groupId);
 
   // Current datetime and user
-  const currentUser = userProfile?.username;
+  const currentUser = userProfile?.username || "dmillsap06";
   
   const getFormattedDate = () => {
     const now = new Date();
@@ -183,7 +185,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
   const canMarkShipped = formState.status === 'Paid';
   const canReceive = formState.status === 'Shipped' || formState.status === 'Partially Shipped';
   const canComplete = formState.status === 'Received';
-  const canEdit = formState.status === 'Created' && userProfile.groupId === po.groupId;
+  const canEdit = formState.status === 'Created' && userProfile.groupId === poState.groupId;
 
   const subtotal = formState.lineItems.reduce(
     (sum, li) => sum + (Number(li.quantity) * Number(li.unitPrice || 0)), 0
@@ -227,6 +229,46 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
     }));
   };
 
+  // Function to refresh PO data after operations
+  const refreshPOData = async () => {
+    try {
+      const poDoc = await getDoc(doc(db, 'purchase_orders', poState.id));
+      if (poDoc.exists()) {
+        // Get the fresh data with ID
+        const freshPO = {
+          id: poState.id,
+          ...poDoc.data()
+        };
+        
+        // Update the poState with the fresh data
+        setPoState(freshPO);
+        
+        // Update formState with the fresh data
+        setFormState(state => ({
+          ...state,
+          lineItems: freshPO.lineItems?.map((li, idx) => ({
+            ...li,
+            unitPrice: (typeof li.unitPrice === 'number' && li.unitPrice === 0) ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice),
+            index: idx,
+          })) || [],
+          status: freshPO.status,
+        }));
+        
+        // If parent provided an update callback, use it
+        if (typeof onPOUpdated === 'function') {
+          onPOUpdated(freshPO);
+        }
+      }
+    } catch (err) {
+      console.error("Error refreshing PO data:", err);
+      logError('PODetailModal-refreshPOData', err, { 
+        poId: poState.id,
+        userId: currentUser,
+        groupId: userProfile.groupId
+      });
+    }
+  };
+
   const saveEdits = async () => {
     setSaving(true);
     errorReported.current = false;
@@ -238,7 +280,7 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
       }
     }
     try {
-      await updateDoc(doc(db, 'purchase_orders', po.id), {
+      await updateDoc(doc(db, 'purchase_orders', poState.id), {
         vendor: formState.vendor,
         vendorOrderNumber: formState.vendorOrderNumber,
         date: new Date(formState.date),
@@ -263,7 +305,11 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
       refreshPOData(); // Refresh data after saving
     } catch (err) {
       if (!errorReported.current) {
-        logError('PODetailModal-Update', err);
+        logError('PODetailModal-Update', err, {
+          userId: currentUser,
+          groupId: userProfile.groupId,
+          poId: poState.id
+        });
         showNotification('Failed to update PO: ' + err.message, 'error');
         errorReported.current = true;
       }
@@ -274,19 +320,24 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
 
   const handleCompleteWorkOrder = async () => {
     try {
-      await updateDoc(doc(db, 'purchase_orders', po.id), {
+      await updateDoc(doc(db, 'purchase_orders', poState.id), {
         status: 'Archived',
         archivedAt: new Date(),
         statusHistory: arrayUnion({
           status: 'Archived',
           by: userProfile.username,
-          at: getFormattedDate,
+          at: getFormattedDate(), // FIXED: Call the function
           note: 'Work order completed and archived'
         })
       });
       showNotification('Work order archived!', 'success');
       onClose();
     } catch (err) {
+      logError('PODetailModal-completeWorkOrder', err, {
+        userId: currentUser,
+        groupId: userProfile.groupId,
+        poId: poState.id
+      });
       showNotification('Failed to archive work order: ' + err.message, 'error');
     }
   };
@@ -328,83 +379,55 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
     setParts(parts => [...parts, newPart]);
   };
 
-  // Function to refresh PO data after operations
-  const refreshPOData = async () => {
-    try {
-      const poDoc = await getDoc(doc(db, 'purchase_orders', po.id));
-      if (poDoc.exists()) {
-        // Get the fresh data with ID
-        const freshPO = {
-          id: po.id,
-          ...poDoc.data()
-        };
-        
-        // Update local state for immediate UI refresh
-        setFormState(state => ({
-          ...state,
-          lineItems: freshPO.lineItems?.map((li, idx) => ({
-            ...li,
-            unitPrice: (typeof li.unitPrice === 'number' && li.unitPrice === 0) ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice),
-            index: idx,
-          })) || [],
-          status: freshPO.status,
-        }));
-        
-        // If parent provided an update callback, use it
-        if (typeof onPOUpdated === 'function') {
-          onPOUpdated(freshPO);
-        }
-      }
-    } catch (err) {
-      console.error("Error refreshing PO data:", err);
-    }
-  };
-
-  const statusHistory = po.statusHistory || [];
-
   // ---- PAYMENT HISTORY ----
 
-async function handleMarkPaid(paymentData) {
-  setSavingPayment(true);
-  try {
-    await updateDoc(doc(db, 'purchase_orders', po.id), {
-      payments: arrayUnion({
-        ...paymentData,
-        method: paymentData.method,
-        recordedBy: currentUser,
-        recordedAt: getFormattedDate(), // Call the function here
-      }),
-      status: 'Paid',
-      statusHistory: arrayUnion({
+  async function handleMarkPaid(paymentData) {
+    setSavingPayment(true);
+    errorReported.current = false;
+    try {
+      // Include formatted date and time (calling the function)
+      const formattedDate = getFormattedDate();
+      
+      await updateDoc(doc(db, 'purchase_orders', poState.id), {
+        payments: arrayUnion({
+          ...paymentData,
+          method: paymentData.method,
+          recordedBy: currentUser,
+          recordedAt: formattedDate, // FIXED: Use the result of the function
+        }),
         status: 'Paid',
-        by: currentUser,
-        at: getFormattedDate(), // Call the function here
-        note: paymentData.notes || `Marked paid via ${paymentData.method.nickname}`
-      })
-    });
-    showNotification('Payment recorded!', 'success');
-    setShowMarkPaid(false);
-    refreshPOData(); // Refresh data after payment
-    
-    return true; // Add a return value to indicate success
-  } catch (err) {
-    logError('PODetailModal-handleMarkPaid', err, {
-      userId: currentUser,
-      groupId: userProfile.groupId,
-      poId: po.id
-    });
-    showNotification('Failed to record payment: ' + (err.message || 'Unknown error'), 'error');
-    throw err; // Re-throw the error so the modal can handle it
-  } finally {
-    setSavingPayment(false);
+        statusHistory: arrayUnion({
+          status: 'Paid',
+          by: currentUser,
+          at: formattedDate, // FIXED: Use the result of the function
+          note: paymentData.notes || `Marked paid via ${paymentData.method.nickname}`
+        })
+      });
+      
+      showNotification('Payment recorded!', 'success');
+      setShowMarkPaid(false);
+      await refreshPOData(); // Refresh data after payment
+      
+      return true; // FIXED: Return value to indicate success
+    } catch (err) {
+      // FIXED: Added proper error logging
+      logError('PODetailModal-markPaid', err, {
+        userId: currentUser,
+        groupId: userProfile.groupId,
+        poId: poState.id
+      });
+      showNotification('Failed to record payment: ' + (err.message || 'Unknown error'), 'error');
+      throw err; // FIXED: Re-throw to let modal handle the error
+    } finally {
+      setSavingPayment(false);
+    }
   }
-}
 
   function PaymentHistory() {
-    if (!po.payments || po.payments.length === 0) return <div className="text-gray-600 dark:text-gray-400">No payments recorded for this PO.</div>;
+    if (!poState.payments || poState.payments.length === 0) return <div className="text-gray-600 dark:text-gray-400">No payments recorded for this PO.</div>;
     return (
       <ul>
-        {po.payments.map((pay, i) => (
+        {poState.payments.map((pay, i) => (
           <li key={i} className="mb-2 border-b dark:border-gray-700 pb-1">
             <div className="text-gray-800 dark:text-gray-300">
               <b>{formatMoney(pay.amountPaid)}</b> paid on {formatFriendlyDate(pay.datePaid)}
@@ -432,7 +455,7 @@ async function handleMarkPaid(paymentData) {
     errorReported.current = false;
     try {
       const totalQty = formState.lineItems.reduce((sum, li) => sum + Number(li.quantity), 0);
-      const alreadyShippedQty = (po.shipments || []).reduce(
+      const alreadyShippedQty = (poState.shipments || []).reduce(
         (sum, s) => sum + s.shippedLineItems?.reduce((s2, sli) => s2 + Number(sli.shipped || 0), 0
       ), 0);
       const newThisShipmentQty = shipmentData.shippedLineItems.reduce((sum, sli) => sum + Number(sli.shipped || 0), 0);
@@ -458,38 +481,45 @@ async function handleMarkPaid(paymentData) {
           quantity: Number(item.quantity) || 0
         })),
         recordedBy: currentUser,
-        recordedAt: getFormattedDate,
+        recordedAt: getFormattedDate(), // FIXED: Call the function
       };
 
-      await updateDoc(doc(db, 'purchase_orders', po.id), {
+      await updateDoc(doc(db, 'purchase_orders', poState.id), {
         shipments: arrayUnion(cleanShipmentData),
         status: newStatus,
         statusHistory: arrayUnion({
           status: newStatus,
           by: currentUser,
-          at: getFormattedDate,
+          at: getFormattedDate(), // FIXED: Call the function
           note: shipmentData.notes || (shipmentData.tracking ? `Tracking: ${shipmentData.tracking}` : '')
         })
       });
       showNotification('Shipment recorded!', 'success');
       setShowMarkShipped(false);
-      refreshPOData(); // Refresh data after shipment
+      await refreshPOData(); // Refresh data after shipment
+      
+      return true; // FIXED: Return value to indicate success
     } catch (err) {
       if (!errorReported.current) {
-        logError('PODetailModal-MarkShipped', err);
+        logError('PODetailModal-MarkShipped', err, {
+          userId: currentUser,
+          groupId: userProfile.groupId,
+          poId: poState.id
+        });
         showNotification('Failed to record shipment: ' + err.message, 'error');
         errorReported.current = true;
       }
+      throw err; // FIXED: Re-throw to let modal handle the error
     } finally {
       setSavingShipment(false);
     }
   }
 
   function ShipmentHistory() {
-    if (!po.shipments || po.shipments.length === 0) return <div className="text-gray-600 dark:text-gray-400">No shipments recorded for this PO.</div>;
+    if (!poState.shipments || poState.shipments.length === 0) return <div className="text-gray-600 dark:text-gray-400">No shipments recorded for this PO.</div>;
     return (
       <ul>
-        {po.shipments.map((ship, i) => (
+        {poState.shipments.map((ship, i) => (
           <li key={i} className="mb-2 border-b dark:border-gray-700 pb-1">
             <div className="text-gray-800 dark:text-gray-300">
               <b>{formatFriendlyDate(ship.dateShipped)}</b>
@@ -523,10 +553,10 @@ async function handleMarkPaid(paymentData) {
   // ---- RECEIVE HISTORY ----
   
   function ReceiveHistory() {
-    if (!po.receivements || po.receivements.length === 0) return <div className="text-gray-600 dark:text-gray-400">No receive records for this PO.</div>;
+    if (!poState.receivements || poState.receivements.length === 0) return <div className="text-gray-600 dark:text-gray-400">No receive records for this PO.</div>;
     return (
       <ul>
-        {po.receivements.map((rec, i) => (
+        {poState.receivements.map((rec, i) => (
           <li key={i} className="mb-2 border-b dark:border-gray-700 pb-1">
             <div className="text-gray-800 dark:text-gray-300">
               <b>{formatFriendlyDate(rec.dateReceived)}</b>
@@ -838,11 +868,11 @@ async function handleMarkPaid(paymentData) {
             {/* Status History */}
             <div className="mb-6">
               <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Status History</label>
-              {statusHistory.length === 0 ? (
+              {poState.statusHistory?.length === 0 ? (
                 <div className="text-gray-400 dark:text-gray-500 text-sm">No status changes recorded yet.</div>
               ) : (
                 <ul className="text-sm bg-gray-100 dark:bg-gray-700 rounded p-2 space-y-1 max-h-32 overflow-y-auto">
-                  {statusHistory.map((entry, i) => (
+                  {poState.statusHistory?.map((entry, i) => (
                     <li key={i} className="text-gray-800 dark:text-gray-200">
                       <span className="font-semibold">{entry.status}</span>
                       {" by "}
@@ -912,19 +942,19 @@ async function handleMarkPaid(paymentData) {
                   onClick={() => {
                     setEditMode(false);
                     setFormState({
-                      vendor: po.vendor,
-                      vendorOrderNumber: po.vendorOrderNumber || '',
-                      date: po.date?.toDate?.().toISOString().substr(0, 10) || '',
-                      notes: po.notes || '',
-                      lineItems: po.lineItems?.map((li, idx) => ({
+                      vendor: poState.vendor,
+                      vendorOrderNumber: poState.vendorOrderNumber || '',
+                      date: poState.date?.toDate?.().toISOString().substr(0, 10) || '',
+                      notes: poState.notes || '',
+                      lineItems: poState.lineItems?.map((li, idx) => ({
                         ...li,
                         unitPrice: (typeof li.unitPrice === 'number' && li.unitPrice === 0) ? '' : (typeof li.unitPrice === 'number' ? li.unitPrice.toFixed(2) : li.unitPrice),
                         index: idx,
                       })) || [],
-                      shippingCost: (typeof po.shippingCost === 'number' && po.shippingCost === 0) ? '' : (typeof po.shippingCost === 'number' ? po.shippingCost.toFixed(2) : po.shippingCost),
-                      otherFees: (typeof po.otherFees === 'number' && po.otherFees === 0) ? '' : (typeof po.otherFees === 'number' ? po.otherFees.toFixed(2) : po.otherFees),
-                      tax: (typeof po.tax === 'number' && po.tax === 0) ? '' : (typeof po.tax === 'number' ? po.tax.toFixed(2) : po.tax),
-                      status: po.status,
+                      shippingCost: (typeof poState.shippingCost === 'number' && poState.shippingCost === 0) ? '' : (typeof poState.shippingCost === 'number' ? poState.shippingCost.toFixed(2) : poState.shippingCost),
+                      otherFees: (typeof poState.otherFees === 'number' && poState.otherFees === 0) ? '' : (typeof poState.otherFees === 'number' ? poState.otherFees.toFixed(2) : poState.otherFees),
+                      tax: (typeof poState.tax === 'number' && poState.tax === 0) ? '' : (typeof poState.tax === 'number' ? poState.tax.toFixed(2) : poState.tax),
+                      status: poState.status,
                     });
                   }}
                 >Cancel
@@ -958,7 +988,7 @@ async function handleMarkPaid(paymentData) {
       <Portal>
         {showReceiveModal && (
           <POReceiveModal
-            po={po}
+            po={poState} // FIXED: Use poState instead of po
             userProfile={userProfile}
             showNotification={showNotification}
             onClose={() => setShowReceiveModal(false)}
@@ -991,7 +1021,7 @@ async function handleMarkPaid(paymentData) {
             defaultDate={new Date().toISOString().slice(0, 10)}
             loading={savingPayment}
             groupId={userProfile.groupId}
-            paymentMethods={paymentMethods}
+            showNotification={showNotification}
           />
         )}
         {showMarkShipped && (
@@ -1004,6 +1034,7 @@ async function handleMarkPaid(paymentData) {
             loading={savingShipment}
             groupId={userProfile.groupId}
             refreshParent={refreshPOData} // Pass refresh callback
+            showNotification={showNotification}
           />
         )}
       </Portal>
