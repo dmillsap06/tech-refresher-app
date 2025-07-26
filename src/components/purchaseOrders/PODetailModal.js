@@ -110,8 +110,6 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
   const [showCreateInventory, setShowCreateInventory] = useState(false);
   const [showCreatePart, setShowCreatePart] = useState(false);
   const [pendingLineIndex, setPendingLineIndex] = useState(null);
-
-  const { methods: paymentMethods } = usePaymentMethods(userProfile.groupId);
   // Using hook without destructuring to avoid unused vars warning
   useShippingCarriers(userProfile.groupId);
 
