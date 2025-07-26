@@ -278,60 +278,64 @@ const PurchaseOrderForm = ({ userProfile, onClose, showNotification }) => {
     setSearchTerms(terms => ({ ...terms, [showCreateModal.lineIdx]: '' }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSaving(true);
-    
-    // Validate that all line items are linked to a catalog item
-    for (const li of lineItems) {
-      if (!li.linkedId) {
-        showNotification('All line items must be linked to a catalog item.', 'error');
-        setIsSaving(false);
-        return;
-      }
-    }
-    
-    try {
-      const poData = {
-        poNumber: '',
-        vendor,
-        vendorOrderNumber,
-        date: Timestamp.fromDate(new Date(date)),
-        status,
-        notes,
-        groupId: userProfile.groupId,
-        lineItems: lineItems.map(li => ({
-          ...li,
-          unitPrice: li.unitPrice === '' ? 0 : Number(li.unitPrice),
-          quantity: Number(li.quantity),
-          quantityReceived: 0
-        })),
-        subtotal,
-        shippingCost: shippingCost === '' ? 0 : Number(shippingCost),
-        otherFees: otherFees === '' ? 0 : Number(otherFees),
-        tax: tax === '' ? 0 : Number(tax),
-        total,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-        statusHistory: [
-          {
-            status: "Created",
-            at: getFormattedDate,
-            by: userProfile.username
-          }
-        ]
-      };
-      
-      await addDoc(collection(db, 'purchase_orders'), poData);
-      showNotification('Purchase Order created!', 'success');
-      onClose();
-    } catch (err) {
-      logError('PurchaseOrderForm-Submit', err);
-      showNotification('Failed to create PO: ' + err.message, 'error');
-    } finally {
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsSaving(true);
+  
+  // Validate that all line items are linked to a catalog item
+  for (const li of lineItems) {
+    if (!li.linkedId) {
+      showNotification('All line items must be linked to a catalog item.', 'error');
       setIsSaving(false);
+      return;
     }
-  };
+  }
+  
+  try {
+    // Get the formatted date once
+    const formattedDate = getFormattedDate();
+    
+    const poData = {
+      poNumber: '',
+      vendor,
+      vendorOrderNumber,
+      date: Timestamp.fromDate(new Date(date)),
+      status,
+      notes,
+      groupId: userProfile.groupId,
+      lineItems: lineItems.map(li => ({
+        ...li,
+        unitPrice: li.unitPrice === '' ? 0 : Number(li.unitPrice),
+        quantity: Number(li.quantity),
+        quantityReceived: 0
+      })),
+      subtotal,
+      shippingCost: shippingCost === '' ? 0 : Number(shippingCost),
+      otherFees: otherFees === '' ? 0 : Number(otherFees),
+      tax: tax === '' ? 0 : Number(tax),
+      total,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+      statusHistory: [
+        {
+          status: "Created",
+          at: formattedDate, // FIXED: Use the result of the function call
+          by: userProfile.username,
+          timestamp: new Date() // Added for better sorting/filtering
+        }
+      ]
+    };
+    
+    await addDoc(collection(db, 'purchase_orders'), poData);
+    showNotification('Purchase Order created!', 'success');
+    onClose();
+  } catch (err) {
+    logError('PurchaseOrderForm-Submit', err);
+    showNotification('Failed to create PO: ' + err.message, 'error');
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
