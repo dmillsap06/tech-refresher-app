@@ -523,7 +523,7 @@ async function handleMarkShipped(shipmentData) {
       statusHistory: arrayUnion(statusHistoryEntry)
     });
     
-    showNotification('Shipment recorded!', 'success');
+    // REMOVED: showNotification('Shipment recorded!', 'success');
     setShowMarkShipped(false);
     await refreshPOData(); // Refresh data after shipment
     
