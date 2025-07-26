@@ -12,6 +12,7 @@ export default function MarkAsShippedModal({
   loading,
   groupId,
   refreshParent, // New prop to explicitly refresh parent
+  showNotification
 }) {
   const { carriers, loading: carriersLoading } = useShippingCarriers(groupId);
   const [step, setStep] = useState('ask-shipment-type');
@@ -22,6 +23,7 @@ export default function MarkAsShippedModal({
   const [notes, setNotes] = useState('');
   const [shippedQuantities, setShippedQuantities] = useState([]);
   const [touched, setTouched] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
   const errorReported = useRef(false);
 
   // Reset state when modal opens
@@ -34,6 +36,7 @@ export default function MarkAsShippedModal({
       setTouched(false);
       setStep('ask-shipment-type');
       errorReported.current = false;
+      setLocalLoading(false);
       
       // Initialize shipped quantities from lineItems
       setShippedQuantities(
@@ -55,7 +58,8 @@ export default function MarkAsShippedModal({
     setShippedQuantities(arr => arr.map((q, i) => i === idx ? { ...q, shipped: value } : q));
   }
 
-  function handleSave() {
+  // Fixed handleSave function - use async/await and don't pass callback
+  async function handleSave() {
     setTouched(true);
     const valid = shippedQuantities.some(q => Number(q.shipped) > 0)
       && shippedQuantities.every(q =>
@@ -65,7 +69,9 @@ export default function MarkAsShippedModal({
       );
     if (!dateShipped || !carrierId || !tracking || !valid) return;
 
+    setLocalLoading(true);
     const carrierObj = carriers.find(c => c.id === carrierId);
+
     try {
       // Prepare shipping data
       const shippingData = {
@@ -85,26 +91,44 @@ export default function MarkAsShippedModal({
         }))
       };
 
-      // Call onSave with data and add optional callback for post-save actions
-      onSave(shippingData, () => {
-        // If refreshParent is provided, call it to refresh the parent component
+      // FIXED: Call onSave with just the data, no callback parameter
+      const result = await onSave(shippingData);
+      
+      // Use the result to determine if the save was successful
+      if (result) {
+        if (typeof showNotification === 'function') {
+          showNotification('Shipment recorded successfully!', 'success');
+        }
+        
+        // After successful save, refresh the parent if needed
         if (typeof refreshParent === 'function') {
-          refreshParent();
+          await refreshParent();
         }
         
         // Close the modal after successful save
         onClose(true);
-      });
-      
+      } else {
+        if (typeof showNotification === 'function') {
+          showNotification('There may have been an issue recording the shipment.', 'warning');
+        }
+      }
     } catch (err) {
       if (!errorReported.current) {
         console.error('MarkAsShippedModal-Save', err);
+        if (typeof showNotification === 'function') {
+          showNotification(`Error recording shipment: ${err.message || 'Unknown error'}`, 'error');
+        }
         errorReported.current = true;
       }
+    } finally {
+      setLocalLoading(false);
     }
   }
 
   if (!open) return null;
+
+  // Use either the prop loading state or our local loading state
+  const isLoading = loading || localLoading;
 
   // Step 1: Ask if this is a full or partial shipment
   if (step === 'ask-shipment-type') {
@@ -242,21 +266,31 @@ export default function MarkAsShippedModal({
               type="button"
               className="px-6 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 font-medium"
               onClick={() => setStep('ask-shipment-type')}
-              disabled={loading}
+              disabled={isLoading}
             >Back</button>
           )}
           <button
             type="button"
             className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-500 font-medium"
             onClick={() => onClose(false)}
-            disabled={loading}
+            disabled={isLoading}
           >Cancel</button>
           <button
             type="button"
-            className={`px-8 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 ${loading || !dateShipped || !carrierId || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity)) ? 'opacity-60' : ''}`}
-            disabled={loading || !dateShipped || !carrierId || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity))}
+            className={`px-8 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 ${isLoading || !dateShipped || !carrierId || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity)) ? 'opacity-60' : ''}`}
+            disabled={isLoading || !dateShipped || !carrierId || !tracking || !shippedQuantities.some(q => Number(q.shipped) > 0) || shippedQuantities.some(q => isNaN(Number(q.shipped)) || Number(q.shipped) < 0 || Number(q.shipped) > (q.max !== undefined ? q.max : q.quantity))}
             onClick={handleSave}
-          >{loading ? 'Saving...' : 'Save'}</button>
+          >
+            {isLoading ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+              </span>
+            ) : 'Save'}
+          </button>
         </div>
       </div>
     </div>

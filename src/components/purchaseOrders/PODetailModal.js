@@ -450,70 +450,82 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
 
   // ---- SHIPMENT HISTORY ----
 
-  async function handleMarkShipped(shipmentData) {
-    setSavingShipment(true);
-    errorReported.current = false;
-    try {
-      const totalQty = formState.lineItems.reduce((sum, li) => sum + Number(li.quantity), 0);
-      const alreadyShippedQty = (poState.shipments || []).reduce(
-        (sum, s) => sum + s.shippedLineItems?.reduce((s2, sli) => s2 + Number(sli.shipped || 0), 0
-      ), 0);
-      const newThisShipmentQty = shipmentData.shippedLineItems.reduce((sum, sli) => sum + Number(sli.shipped || 0), 0);
-      const newTotalShipped = alreadyShippedQty + newThisShipmentQty;
+async function handleMarkShipped(shipmentData) {
+  setSavingShipment(true);
+  errorReported.current = false;
+  try {
+    const totalQty = formState.lineItems.reduce((sum, li) => sum + Number(li.quantity), 0);
+    const alreadyShippedQty = (poState.shipments || []).reduce(
+      (sum, s) => sum + s.shippedLineItems?.reduce((s2, sli) => s2 + Number(sli.shipped || 0), 0
+    ), 0);
+    const newThisShipmentQty = shipmentData.shippedLineItems.reduce((sum, sli) => sum + Number(sli.shipped || 0), 0);
+    const newTotalShipped = alreadyShippedQty + newThisShipmentQty;
 
-      let newStatus = 'Partially Shipped';
-      if (newTotalShipped >= totalQty && totalQty > 0) newStatus = 'Shipped';
+    let newStatus = 'Partially Shipped';
+    if (newTotalShipped >= totalQty && totalQty > 0) newStatus = 'Shipped';
 
-      // Clean up the shipment data to ensure no undefined values
-      const cleanShipmentData = {
-        dateShipped: shipmentData.dateShipped || new Date().toISOString().substring(0, 10),
-        carrier: shipmentData.carrier || null, // { id, name }
-        tracking: shipmentData.tracking || "",
-        notes: shipmentData.notes || "",
-        shippedLineItems: shipmentData.shippedLineItems.map(item => ({
-          index: typeof item.index === 'number' ? item.index : 0,
-          description: item.description || "Unnamed item",
-          shipped: Number(item.shipped) || 0,
-          lineIndex: typeof item.lineIndex === 'number' ? item.lineIndex : null,
-          id: item.id || null,
-          category: item.category || null,
-          linkedId: item.linkedId || null,
-          quantity: Number(item.quantity) || 0
-        })),
-        recordedBy: currentUser,
-        recordedAt: getFormattedDate(), // FIXED: Call the function
-      };
+    // Get the formatted date once and reuse it
+    const formattedDate = getFormattedDate();
 
-      await updateDoc(doc(db, 'purchase_orders', poState.id), {
-        shipments: arrayUnion(cleanShipmentData),
-        status: newStatus,
-        statusHistory: arrayUnion({
-          status: newStatus,
-          by: currentUser,
-          at: getFormattedDate(), // FIXED: Call the function
-          note: shipmentData.notes || (shipmentData.tracking ? `Tracking: ${shipmentData.tracking}` : '')
-        })
+    // Clean up the shipment data to ensure no undefined values
+    const cleanShipmentData = {
+      dateShipped: shipmentData.dateShipped || new Date().toISOString().substring(0, 10),
+      carrier: shipmentData.carrier || null, // { id, name }
+      tracking: shipmentData.tracking || "",
+      notes: shipmentData.notes || "",
+      shippedLineItems: shipmentData.shippedLineItems.map(item => ({
+        index: typeof item.index === 'number' ? item.index : 0,
+        description: item.description || "Unnamed item",
+        shipped: Number(item.shipped) || 0,
+        lineIndex: typeof item.lineIndex === 'number' ? item.lineIndex : null,
+        id: item.id || null,
+        category: item.category || null,
+        linkedId: item.linkedId || null,
+        quantity: Number(item.quantity) || 0
+      })),
+      recordedBy: currentUser,
+      recordedAt: formattedDate, // FIXED: Use the string, not the function
+    };
+
+    const statusHistoryEntry = {
+      status: newStatus,
+      by: currentUser,
+      at: formattedDate, // FIXED: Use the string, not the function
+      note: shipmentData.notes || (shipmentData.tracking ? `Tracking: ${shipmentData.tracking}` : '')
+    };
+
+    // Log what we're about to send to Firestore for debugging
+    console.log("Shipping data being saved:", {
+      cleanShipmentData,
+      statusHistoryEntry
+    });
+
+    await updateDoc(doc(db, 'purchase_orders', poState.id), {
+      shipments: arrayUnion(cleanShipmentData),
+      status: newStatus,
+      statusHistory: arrayUnion(statusHistoryEntry)
+    });
+    
+    showNotification('Shipment recorded!', 'success');
+    setShowMarkShipped(false);
+    await refreshPOData(); // Refresh data after shipment
+    
+    return true; // FIXED: Return value to indicate success
+  } catch (err) {
+    if (!errorReported.current) {
+      logError('PODetailModal-MarkShipped', err, {
+        userId: currentUser,
+        groupId: userProfile.groupId,
+        poId: poState.id
       });
-      showNotification('Shipment recorded!', 'success');
-      setShowMarkShipped(false);
-      await refreshPOData(); // Refresh data after shipment
-      
-      return true; // FIXED: Return value to indicate success
-    } catch (err) {
-      if (!errorReported.current) {
-        logError('PODetailModal-MarkShipped', err, {
-          userId: currentUser,
-          groupId: userProfile.groupId,
-          poId: poState.id
-        });
-        showNotification('Failed to record shipment: ' + err.message, 'error');
-        errorReported.current = true;
-      }
-      throw err; // FIXED: Re-throw to let modal handle the error
-    } finally {
-      setSavingShipment(false);
+      showNotification('Failed to record shipment: ' + err.message, 'error');
+      errorReported.current = true;
     }
+    throw err; // FIXED: Re-throw to let modal handle the error
+  } finally {
+    setSavingShipment(false);
   }
+}
 
   function ShipmentHistory() {
     if (!poState.shipments || poState.shipments.length === 0) return <div className="text-gray-600 dark:text-gray-400">No shipments recorded for this PO.</div>;
