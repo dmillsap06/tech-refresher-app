@@ -12,8 +12,12 @@ export default function MarkAsPaidModal({
   defaultDate,
   loading,
   groupId,
-  showNotification // If your parent component provides a notification function
+  showNotification
 }) {
+  console.log("[MarkAsPaidModal] Initializing with props:", { 
+    open, defaultAmount, defaultDate, loading, groupId 
+  });
+  
   const { methods, loading: methodsLoading } = usePaymentMethods(groupId);
   const [datePaid, setDatePaid] = useState(defaultDate || new Date().toISOString().substr(0, 10));
   const [amountPaid, setAmountPaid] = useState(defaultAmount !== undefined ? Number(defaultAmount).toFixed(2) : '');
@@ -25,25 +29,44 @@ export default function MarkAsPaidModal({
   const errorReported = useRef(false);
   
   // Current date/time and username for display
-  const currentDateTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
-  const currentUser = "dmillsap06"; // This should ideally be dynamic from auth context
+  const currentDateTime = "2025-07-26 02:29:22";
+  const currentUser = "dmillsap06";
+
+  // Log when methods change
+  React.useEffect(() => {
+    console.log("[MarkAsPaidModal] Payment methods:", methods);
+    console.log("[MarkAsPaidModal] Methods loading:", methodsLoading);
+  }, [methods, methodsLoading]);
 
   // Filtering/Disabling: Only show methods with active !== false (default is active)
   const selectableMethods = methods.filter(m => m.active !== false);
 
   const handleSave = async () => {
+    console.log("[MarkAsPaidModal] handleSave called");
     setTouched(true);
     errorReported.current = false;
     
-    if (!datePaid || !amountPaid || isNaN(Number(amountPaid)) || !methodId) return;
+    // Basic validation checks
+    if (!datePaid || !amountPaid || isNaN(Number(amountPaid)) || !methodId) {
+      console.log("[MarkAsPaidModal] Validation failed:", {
+        datePaid: !datePaid,
+        amountPaid: !amountPaid,
+        isNaN: isNaN(Number(amountPaid)),
+        methodId: !methodId
+      });
+      return;
+    }
     
     const methodObj = selectableMethods.find(m => m.id === methodId);
     if (!methodObj) {
+      console.error("[MarkAsPaidModal] Method not found:", methodId);
       if (typeof showNotification === 'function') {
         showNotification('Invalid payment method selected', 'error');
       }
       return;
     }
+    
+    console.log("[MarkAsPaidModal] Method found:", methodObj);
     
     try {
       setLocalLoading(true);
@@ -51,49 +74,65 @@ export default function MarkAsPaidModal({
       // Create the payment data object
       const paymentData = {
         datePaid,
-        amountPaid: Number(parseFloat(amountPaid).toFixed(2)), // Ensure proper number format
+        amountPaid: Number(amountPaid),
         method: {
           id: methodObj.id,
-          type: methodObj.type,
-          nickname: methodObj.nickname,
+          type: methodObj.type || '',
+          nickname: methodObj.nickname || '',
           lastFour: methodObj.lastFour || null,
           notes: methodObj.notes || null
         },
-        reference: reference || null,
-        notes: notes || null,
+        reference: reference || '',
+        notes: notes || '',
         recordedBy: currentUser,
         recordedAt: new Date().toISOString()
       };
       
-      // Call the onSave function from parent and handle the Promise
-      await onSave(paymentData);
+      console.log("[MarkAsPaidModal] Payment data prepared:", JSON.stringify(paymentData, null, 2));
       
-      // If we get here, the save was successful
-      if (typeof showNotification === 'function') {
-        showNotification('Payment recorded successfully', 'success');
-      }
-      
-      // Close the modal on success
-      onClose();
-    } catch (err) {
-      if (!errorReported.current) {
-        // Log the error to your system with user context
-        logError('MarkAsPaidModal-handleSave', err, { 
-          userId: currentUser,
-          groupId: groupId,
-          methodId: methodId
-        });
+      // Execute the save with error boundary
+      try {
+        console.log("[MarkAsPaidModal] Calling onSave function...");
+        const result = await onSave(paymentData);
+        console.log("[MarkAsPaidModal] onSave result:", result);
         
-        // Show an error in the console
-        console.error("Error in MarkAsPaidModal:", err);
-        
-        // Optionally show a notification to the user if showNotification is available
+        // If we reach here, it was successful
         if (typeof showNotification === 'function') {
-          showNotification('Failed to mark as paid: ' + (err.message || 'Unknown error'), 'error');
+          showNotification('Payment recorded successfully', 'success');
         }
         
-        // Mark error as reported to prevent duplicate reports
-        errorReported.current = true;
+        // Close the modal
+        onClose();
+      } catch (saveError) {
+        console.error("[MarkAsPaidModal] Error in onSave:", saveError);
+        // Log the error properly
+        logError('MarkAsPaidModal-onSave', saveError, {
+          userId: currentUser,
+          groupId,
+          methodId,
+          payload: JSON.stringify({
+            datePaid,
+            amountPaid,
+            methodId,
+            hasReference: !!reference
+          })
+        });
+        
+        if (typeof showNotification === 'function') {
+          showNotification(`Failed to record payment: ${saveError.message || 'Unknown error'}`, 'error');
+        }
+      }
+    } catch (err) {
+      console.error("[MarkAsPaidModal] Error preparing payment:", err);
+      logError('MarkAsPaidModal-preparePayment', err, {
+        userId: currentUser,
+        groupId,
+        methodId,
+        stage: 'preparation'
+      });
+      
+      if (typeof showNotification === 'function') {
+        showNotification('Error preparing payment data', 'error');
       }
     } finally {
       setLocalLoading(false);
@@ -140,8 +179,6 @@ export default function MarkAsPaidModal({
           <label className="block font-medium mb-1 text-gray-800 dark:text-gray-200">Payment Method<span className="text-red-500 dark:text-red-400">*</span></label>
           {methodsLoading ? (
             <div className="text-gray-600 dark:text-gray-400">Loading methods...</div>
-          ) : selectableMethods.length === 0 ? (
-            <div className="text-red-600 dark:text-red-400">No active payment methods available</div>
           ) : (
             <select
               className={inputClass}
@@ -191,6 +228,7 @@ export default function MarkAsPaidModal({
             className={`px-5 py-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors ${isLoading ? 'opacity-60' : ''}`}
             disabled={isLoading || !datePaid || !amountPaid || isNaN(Number(amountPaid)) || !methodId}
             onClick={handleSave}
+            data-testid="save-payment-button"
           >
             {isLoading ? (
               <span className="flex items-center">
