@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import logError from '../../utils/logError';
 import usePaymentMethods from './usePaymentMethods';
 
@@ -18,6 +18,17 @@ export default function MarkAsPaidModal({
     open, defaultAmount, defaultDate, loading, groupId 
   });
   
+  // Check if onSave is properly defined
+  useEffect(() => {
+    console.log("[MarkAsPaidModal] onSave function type:", typeof onSave);
+    if (typeof onSave !== 'function') {
+      console.error("[MarkAsPaidModal] onSave is not a function:", onSave);
+      logError('MarkAsPaidModal-setup', new Error('onSave is not a function'), {
+        onSaveType: typeof onSave
+      });
+    }
+  }, [onSave]);
+  
   const { methods, loading: methodsLoading } = usePaymentMethods(groupId);
   const [datePaid, setDatePaid] = useState(defaultDate || new Date().toISOString().substr(0, 10));
   const [amountPaid, setAmountPaid] = useState(defaultAmount !== undefined ? Number(defaultAmount).toFixed(2) : '');
@@ -27,10 +38,12 @@ export default function MarkAsPaidModal({
   const [touched, setTouched] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
   const [internalError, setInternalError] = useState('');
+  const [debugInfo, setDebugInfo] = useState(null);
   const errorReported = useRef(false);
+  const saveAttempted = useRef(false);
   
   // Current date/time and username for display
-  const currentDateTime = "2025-07-26 02:35:41";
+  const currentDateTime = "2025-07-26 02:40:26";
   const currentUser = "dmillsap06";
 
   // Log when methods change
@@ -42,11 +55,45 @@ export default function MarkAsPaidModal({
   // Filtering/Disabling: Only show methods with active !== false (default is active)
   const selectableMethods = methods.filter(m => m.active !== false);
 
+  // Debug helper to inspect parent component behavior
+  const inspectParentOnSave = async (data) => {
+    // Create a debugging info object
+    const debugData = {
+      callTime: new Date().toISOString(),
+      functionType: typeof onSave,
+      hasThrown: false,
+      returnValue: 'pending',
+      error: null,
+      callStack: new Error().stack
+    };
+    
+    try {
+      // Call the parent's onSave function
+      const result = await onSave(data);
+      debugData.returnValue = result === undefined ? 'undefined' : JSON.stringify(result);
+      return result;
+    } catch (error) {
+      debugData.hasThrown = true;
+      debugData.error = {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        code: error.code
+      };
+      throw error;
+    } finally {
+      // Save debug info
+      console.log("[MarkAsPaidModal] Parent onSave debug:", debugData);
+      setDebugInfo(debugData);
+    }
+  };
+
   const handleSave = async () => {
     console.log("[MarkAsPaidModal] handleSave called");
     setTouched(true);
     setInternalError('');
     errorReported.current = false;
+    saveAttempted.current = true;
     
     // Basic validation checks
     if (!datePaid || !amountPaid || isNaN(Number(amountPaid)) || !methodId) {
@@ -63,6 +110,10 @@ export default function MarkAsPaidModal({
     if (!methodObj) {
       console.error("[MarkAsPaidModal] Method not found:", methodId);
       setInternalError('Invalid payment method selected');
+      logError('MarkAsPaidModal-methodNotFound', new Error('Method not found'), { 
+        methodId, 
+        availableMethods: selectableMethods.map(m => m.id)
+      });
       if (typeof showNotification === 'function') {
         showNotification('Invalid payment method selected', 'error');
       }
@@ -93,23 +144,38 @@ export default function MarkAsPaidModal({
       
       console.log("[MarkAsPaidModal] Payment data prepared:", JSON.stringify(paymentData, null, 2));
       
-      // Try executing the save with better error handling
+      // Execute the save with enhanced debugging
+      console.log("[MarkAsPaidModal] Calling onSave function...");
+      
       try {
-        console.log("[MarkAsPaidModal] Calling onSave function...");
-        
-        // Wrap onSave in a Promise.resolve to ensure it always returns a promise
-        const result = await Promise.resolve(onSave(paymentData)).catch(err => {
-          throw err; // Re-throw to be caught by outer catch
-        });
+        // Use our instrumented version that captures more debug info
+        const result = await inspectParentOnSave(paymentData);
         
         console.log("[MarkAsPaidModal] onSave result:", result);
         
-        // Check if result indicates success - modify this condition based on your API
-        if (result === false) {
-          throw new Error("Payment recording failed silently");
+        // Here we'll force error logging for the undefined case
+        if (result === undefined) {
+          // Log an error about the undefined result
+          const undefinedError = new Error("Payment function returned undefined - possible silent failure");
+          logError('MarkAsPaidModal-undefinedResult', undefinedError, {
+            userId: currentUser,
+            groupId,
+            methodId,
+            callStack: new Error().stack,
+            paymentData: JSON.stringify(paymentData)
+          });
+          
+          // Show error in UI but don't close modal
+          setInternalError('Payment may not have been recorded properly. Please check if payment was applied before trying again.');
+          
+          if (typeof showNotification === 'function') {
+            showNotification('Payment recording may have failed. Please verify before trying again.', 'warning');
+          }
+          
+          return; // Don't close modal
         }
         
-        // If we reach here, it was successful
+        // If we reach here with a defined result, it was successful
         if (typeof showNotification === 'function') {
           showNotification('Payment recorded successfully', 'success');
         }
@@ -158,6 +224,20 @@ export default function MarkAsPaidModal({
     }
   };
 
+  // Effect to log errors when modal closes if payment was attempted
+  useEffect(() => {
+    return () => {
+      if (saveAttempted.current && !errorReported.current) {
+        // Log that the modal was closed after a save attempt without success confirmation
+        logError('MarkAsPaidModal-lifecycle', new Error('Modal closed without confirmed success after save attempt'), {
+          userId: currentUser,
+          groupId,
+          debugInfo: debugInfo
+        });
+      }
+    };
+  }, [currentUser, groupId, debugInfo]);
+
   if (!open) return null;
 
   // Use either the prop loading state or our local loading state
@@ -175,6 +255,17 @@ export default function MarkAsPaidModal({
         {internalError && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 text-red-700 dark:text-red-300 text-sm">
             <strong>Error:</strong> {internalError}
+          </div>
+        )}
+        
+        {debugInfo && debugInfo.hasThrown && (
+          <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/30 border-l-4 border-orange-500 text-orange-700 dark:text-orange-300 text-xs">
+            <details>
+              <summary className="font-semibold cursor-pointer">Technical Details</summary>
+              <pre className="mt-2 overflow-auto max-h-32">
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+            </details>
           </div>
         )}
         
@@ -268,7 +359,8 @@ export default function MarkAsPaidModal({
             ) : 'Save'}
           </button>
         </div>
-        {/* Optionally show details about the selected method */}
+        
+        {/* Selected method details */}
         {methodId && (() => {
           const m = selectableMethods.find(m => m.id === methodId);
           if (!m) return null;
