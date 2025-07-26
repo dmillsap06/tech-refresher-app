@@ -46,32 +46,48 @@ function formatFriendlyDate(dt) {
   return `${d.toLocaleString('en-US', { month: 'long' })} ${day}${daySuffix}, ${d.getFullYear()}`;
 }
 
-// New function to format date/time for "Recorded by" lines
 function formatDetailedDateTime(dt) {
   if (!dt) return '-';
+  
+  // If it's already a formatted string with EST, just return it
+  if (typeof dt === 'string' && dt.includes('EST')) {
+    return dt;
+  }
+  
   let d;
-  if (typeof dt === 'string') d = new Date(dt);
-  else if (dt.toDate) d = dt.toDate();
-  else d = dt;
-  
-  // Get date components
-  const day = d.getDate();
-  const daySuffix =
-    day % 10 === 1 && day !== 11 ? 'st' :
-    day % 10 === 2 && day !== 12 ? 'nd' :
-    day % 10 === 3 && day !== 13 ? 'rd' : 'th';
-  
-  // Format month, day, year
-  const month = d.toLocaleString('en-US', { month: 'long' });
-  const year = d.getFullYear();
-  
-  // Format time (hours, minutes, AM/PM)
-  const hours = d.getHours();
-  const minutes = d.getMinutes().toString().padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  const hours12 = hours % 12 || 12; // Convert to 12-hour format
-  
-  return `${month} ${day}${daySuffix}, ${year} at ${hours12}:${minutes}${ampm} EST`;
+  try {
+    if (typeof dt === 'string') d = new Date(dt);
+    else if (dt.toDate) d = dt.toDate();
+    else d = dt;
+    
+    // Check if we have a valid date
+    if (isNaN(d.getTime())) {
+      console.warn('Invalid date format:', dt);
+      return dt; // Return the original if we can't parse it
+    }
+    
+    // Get date components
+    const day = d.getDate();
+    const daySuffix =
+      day % 10 === 1 && day !== 11 ? 'st' :
+      day % 10 === 2 && day !== 12 ? 'nd' :
+      day % 10 === 3 && day !== 13 ? 'rd' : 'th';
+    
+    // Format month, day, year
+    const month = d.toLocaleString('en-US', { month: 'long' });
+    const year = d.getFullYear();
+    
+    // Format time (hours, minutes, AM/PM)
+    const hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12; // Convert to 12-hour format
+    
+    return `${month} ${day}${daySuffix}, ${year} at ${hours12}:${minutes}${ampm} EST`;
+  } catch (err) {
+    console.error('Error formatting date:', err, dt);
+    return String(dt); // Fallback to string representation
+  }
 }
 
 const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated }) => {
@@ -376,76 +392,81 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
     setParts(parts => [...parts, newPart]);
   };
 
-  // ---- PAYMENT HISTORY ----
-
-  async function handleMarkPaid(paymentData) {
-    setSavingPayment(true);
-    errorReported.current = false;
-    try {
-      // Include formatted date and time (calling the function)
-      const formattedDate = getFormattedDate();
-      
-      await updateDoc(doc(db, 'purchase_orders', poState.id), {
-        payments: arrayUnion({
-          ...paymentData,
-          method: paymentData.method,
-          recordedBy: currentUser,
-          recordedAt: formattedDate, // FIXED: Use the result of the function
-        }),
+async function handleMarkPaid(paymentData) {
+  setSavingPayment(true);
+  errorReported.current = false;
+  try {
+    // Create a timestamp for consistent display
+    const now = new Date();
+    
+    // Get formatted date for display only
+    const formattedDate = getFormattedDate();
+    
+    await updateDoc(doc(db, 'purchase_orders', poState.id), {
+      payments: arrayUnion({
+        ...paymentData,
+        method: paymentData.method,
+        recordedBy: currentUser,
+        recordedAt: formattedDate, // Human-readable date
+        recordedAtTimestamp: now, // Timestamp for sorting/filtering
+      }),
+      status: 'Paid',
+      statusHistory: arrayUnion({
         status: 'Paid',
-        statusHistory: arrayUnion({
-          status: 'Paid',
-          by: currentUser,
-          at: formattedDate, // FIXED: Use the result of the function
-          note: paymentData.notes || `Marked paid via ${paymentData.method.nickname}`
-        })
-      });
-      
-      showNotification('Payment recorded!', 'success');
-      setShowMarkPaid(false);
-      await refreshPOData(); // Refresh data after payment
-      
-      return true; // FIXED: Return value to indicate success
-    } catch (err) {
-      // FIXED: Added proper error logging
-      logError('PODetailModal-markPaid', err, {
-        userId: currentUser,
-        groupId: userProfile.groupId,
-        poId: poState.id
-      });
-      showNotification('Failed to record payment: ' + (err.message || 'Unknown error'), 'error');
-      throw err; // FIXED: Re-throw to let modal handle the error
-    } finally {
-      setSavingPayment(false);
-    }
+        by: currentUser,
+        at: formattedDate, // Human-readable date
+        timestamp: now, // Timestamp for sorting/filtering
+        note: paymentData.notes || `Marked paid via ${paymentData.method.nickname}`
+      })
+    });
+    
+    showNotification('Payment recorded!', 'success');
+    setShowMarkPaid(false);
+    await refreshPOData(); // Refresh data after payment
+    
+    return true;
+  } catch (err) {
+    logError('PODetailModal-markPaid', err, {
+      userId: currentUser,
+      groupId: userProfile.groupId,
+      poId: poState.id
+    });
+    showNotification('Failed to record payment: ' + (err.message || 'Unknown error'), 'error');
+    throw err;
+  } finally {
+    setSavingPayment(false);
   }
+}
 
-  function PaymentHistory() {
-    if (!poState.payments || poState.payments.length === 0) return <div className="text-gray-600 dark:text-gray-400">No payments recorded for this PO.</div>;
-    return (
-      <ul>
-        {poState.payments.map((pay, i) => (
-          <li key={i} className="mb-2 border-b dark:border-gray-700 pb-1">
-            <div className="text-gray-800 dark:text-gray-300">
-              <b>{formatMoney(pay.amountPaid)}</b> paid on {formatFriendlyDate(pay.datePaid)}
-            </div>
-            <div className="text-gray-700 dark:text-gray-300">
-              via <span className="font-semibold">{pay.method.nickname}</span>
-              {" "}({pay.method.type}{pay.method.lastFour ? `, ****${pay.method.lastFour}` : ''})
-              {pay.method.notes && <> - {pay.method.notes}</>}
-            </div>
-            {pay.reference && <div className="text-gray-700 dark:text-gray-300">Ref: {pay.reference}</div>}
-            {pay.notes && <div className="text-gray-700 dark:text-gray-300">Notes: {pay.notes}</div>}
-            <div className="text-xs text-gray-400 dark:text-gray-500">
-              Recorded by {pay.recordedBy} on {formatDetailedDateTime(pay.recordedAt)}
-            </div>
-          </li>
-        ))}
-      </ul>
-    );
-  }
-
-  // ---- SHIPMENT HISTORY ----
+function PaymentHistory() {
+  if (!poState.payments || poState.payments.length === 0) return <div className="text-gray-600 dark:text-gray-400">No payments recorded for this PO.</div>;
+  return (
+    <ul>
+      {poState.payments.map((pay, i) => (
+        <li key={i} className="mb-2 border-b dark:border-gray-700 pb-1">
+          <div className="text-gray-800 dark:text-gray-300">
+            <b>{formatMoney(pay.amountPaid)}</b> paid on {formatFriendlyDate(pay.datePaid)}
+          </div>
+          <div className="text-gray-700 dark:text-gray-300">
+            via <span className="font-semibold">{pay.method.nickname}</span>
+            {" "}({pay.method.type}{pay.method.lastFour ? `, ****${pay.method.lastFour}` : ''})
+            {pay.method.notes && <> - {pay.method.notes}</>}
+          </div>
+          {pay.reference && <div className="text-gray-700 dark:text-gray-300">Ref: {pay.reference}</div>}
+          {pay.notes && <div className="text-gray-700 dark:text-gray-300">Notes: {pay.notes}</div>}
+          <div className="text-xs text-gray-400 dark:text-gray-500">
+            Recorded by {pay.recordedBy} on {
+              // Use recordedAt directly if it contains "EST" (it's already formatted)
+              typeof pay.recordedAt === 'string' && pay.recordedAt.includes('EST') 
+                ? pay.recordedAt 
+                : formatDetailedDateTime(pay.recordedAtTimestamp || pay.recordedAt)
+            }
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 async function handleMarkShipped(shipmentData) {
   setSavingShipment(true);
@@ -461,7 +482,10 @@ async function handleMarkShipped(shipmentData) {
     let newStatus = 'Partially Shipped';
     if (newTotalShipped >= totalQty && totalQty > 0) newStatus = 'Shipped';
 
-    // Get the formatted date once and reuse it
+    // Create a timestamp for consistent display
+    const now = new Date();
+    
+    // Get formatted date for display only
     const formattedDate = getFormattedDate();
 
     // Clean up the shipment data to ensure no undefined values
@@ -481,21 +505,17 @@ async function handleMarkShipped(shipmentData) {
         quantity: Number(item.quantity) || 0
       })),
       recordedBy: currentUser,
-      recordedAt: formattedDate, // FIXED: Use the string, not the function
+      recordedAt: formattedDate, // Human-readable date
+      recordedAtTimestamp: now, // Timestamp for sorting/filtering
     };
 
     const statusHistoryEntry = {
       status: newStatus,
       by: currentUser,
-      at: formattedDate, // FIXED: Use the string, not the function
+      at: formattedDate, // Human-readable date
+      timestamp: now, // Timestamp for sorting/filtering
       note: shipmentData.notes || (shipmentData.tracking ? `Tracking: ${shipmentData.tracking}` : '')
     };
-
-    // Log what we're about to send to Firestore for debugging
-    console.log("Shipping data being saved:", {
-      cleanShipmentData,
-      statusHistoryEntry
-    });
 
     await updateDoc(doc(db, 'purchase_orders', poState.id), {
       shipments: arrayUnion(cleanShipmentData),
@@ -507,7 +527,7 @@ async function handleMarkShipped(shipmentData) {
     setShowMarkShipped(false);
     await refreshPOData(); // Refresh data after shipment
     
-    return true; // FIXED: Return value to indicate success
+    return true;
   } catch (err) {
     if (!errorReported.current) {
       logError('PODetailModal-MarkShipped', err, {
@@ -518,7 +538,7 @@ async function handleMarkShipped(shipmentData) {
       showNotification('Failed to record shipment: ' + err.message, 'error');
       errorReported.current = true;
     }
-    throw err; // FIXED: Re-throw to let modal handle the error
+    throw err;
   } finally {
     setSavingShipment(false);
   }
