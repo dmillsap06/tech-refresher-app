@@ -364,33 +364,41 @@ const PODetailModal = ({ po, userProfile, showNotification, onClose, onPOUpdated
 
   // ---- PAYMENT HISTORY ----
 
-  async function handleMarkPaid(paymentData) {
-    setSavingPayment(true);
-    try {
-      await updateDoc(doc(db, 'purchase_orders', po.id), {
-        payments: arrayUnion({
-          ...paymentData,
-          method: paymentData.method,
-          recordedBy: currentUser,
-          recordedAt: getFormattedDate,
-        }),
+async function handleMarkPaid(paymentData) {
+  setSavingPayment(true);
+  try {
+    await updateDoc(doc(db, 'purchase_orders', po.id), {
+      payments: arrayUnion({
+        ...paymentData,
+        method: paymentData.method,
+        recordedBy: currentUser,
+        recordedAt: getFormattedDate(), // Call the function here
+      }),
+      status: 'Paid',
+      statusHistory: arrayUnion({
         status: 'Paid',
-        statusHistory: arrayUnion({
-          status: 'Paid',
-          by: currentUser,
-          at: getFormattedDate,
-          note: paymentData.notes || `Marked paid via ${paymentData.method.nickname}`
-        })
-      });
-      showNotification('Payment recorded!', 'success');
-      setShowMarkPaid(false);
-      refreshPOData(); // Refresh data after payment
-    } catch (err) {
-      showNotification('Failed to record payment', 'error');
-    } finally {
-      setSavingPayment(false);
-    }
+        by: currentUser,
+        at: getFormattedDate(), // Call the function here
+        note: paymentData.notes || `Marked paid via ${paymentData.method.nickname}`
+      })
+    });
+    showNotification('Payment recorded!', 'success');
+    setShowMarkPaid(false);
+    refreshPOData(); // Refresh data after payment
+    
+    return true; // Add a return value to indicate success
+  } catch (err) {
+    logError('PODetailModal-handleMarkPaid', err, {
+      userId: currentUser,
+      groupId: userProfile.groupId,
+      poId: po.id
+    });
+    showNotification('Failed to record payment: ' + (err.message || 'Unknown error'), 'error');
+    throw err; // Re-throw the error so the modal can handle it
+  } finally {
+    setSavingPayment(false);
   }
+}
 
   function PaymentHistory() {
     if (!po.payments || po.payments.length === 0) return <div className="text-gray-600 dark:text-gray-400">No payments recorded for this PO.</div>;
